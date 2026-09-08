@@ -38,6 +38,15 @@
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* RESETS PARA NAVEGACIÓN MÓVIL PURE RESPONSIVE */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 * { 
   box-sizing: border-box; 
   -webkit-tap-highlight-color: transparent; 
@@ -45,21 +54,19 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  margin: 0;
-  padding: 0;
   background-color: var(--bg-main);
   color: var(--text-main);
   min-height: 100vh;
 }
 
-/* CENTRADO PERFECTO DE AUTENTICACIÓN (PC Y MÓVIL) */
+/* CENTRADO AUTENTICACIÓN */
 .auth-wrapper {
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   background-color: var(--bg-main);
 }
 
@@ -68,7 +75,7 @@ body {
   max-width: 400px;
   background-color: var(--card-bg);
   border-radius: 20px;
-  padding: 32px 24px;
+  padding: 24px 18px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
@@ -76,9 +83,10 @@ body {
 .card {
   background-color: var(--card-bg);
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  max-width: 100%;
 }
 
 input, select, textarea {
@@ -89,15 +97,15 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 16px;
+  font-size: 16px; /* Evita auto-zoom en iPhone/Android */
   outline: none;
+  box-sizing: border-box;
 }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
 }
 
-/* ENVOLTORIO PARA EL OJO EN LA CONTRASEÑA */
 .password-wrapper {
   position: relative;
   width: 100%;
@@ -124,13 +132,6 @@ input:focus, select:focus, textarea:focus {
   cursor: pointer;
   opacity: 0.6;
   color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toggle-password:hover {
-  opacity: 1;
 }
 
 button {
@@ -159,10 +160,12 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
-/* LAYOUT PRINCIPAL Y SIDEBAR */
+/* CONTENEDORES Y ESTRUCTURA */
 .layout-container {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
 }
 
 .sidebar {
@@ -230,36 +233,39 @@ button:hover { background-color: var(--primary-hover); }
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .plan-grid-wrapper {
   display: grid;
   grid-template-columns: 1fr 280px;
-  gap: 32px;
-  align-items: center;
+  gap: 28px;
+  align-items: start;
+  width: 100%;
 }
 
 .days-selector-container {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
   padding-bottom: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   scrollbar-width: none;
+  width: 100%;
+  max-width: 100%;
 }
 
 .days-selector-container::-webkit-scrollbar { display: none; }
 
 .day-pill {
   flex: 0 0 auto;
-  width: 64px;
-  padding: 12px 0;
-  border-radius: 16px;
+  width: 58px;
+  padding: 10px 0;
+  border-radius: 14px;
   background-color: var(--card-bg);
   border: 1px solid var(--border);
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
   user-select: none;
 }
 
@@ -271,7 +277,7 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 .day-pill .day-number {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   margin-top: 2px;
   color: var(--text-main);
@@ -280,7 +286,6 @@ button:hover { background-color: var(--primary-hover); }
 .day-pill.active {
   background-color: var(--primary-light);
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(58, 172, 184, 0.2);
 }
 
 .day-pill.active .day-name,
@@ -288,19 +293,20 @@ button:hover { background-color: var(--primary-hover); }
 
 .meal-card {
   background-color: var(--card-bg);
-  border-radius: 20px;
-  padding: 18px;
+  border-radius: 18px;
+  padding: 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  width: 100%;
 }
 
 .meal-img-wrapper {
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   overflow: hidden;
   background-color: var(--input-bg);
@@ -317,11 +323,14 @@ button:hover { background-color: var(--primary-hover); }
   object-fit: cover;
 }
 
-.meal-info { flex: 1; }
+.meal-info {
+  flex: 1;
+  min-width: 0; /* Previene el desbordamiento de texto */
+}
 
 .meal-badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
@@ -336,38 +345,21 @@ button:hover { background-color: var(--primary-hover); }
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   background-color: var(--input-bg);
   color: var(--text-main);
 }
 
-.custom-input-wrapper {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.custom-input-wrapper input { margin-top: 0; }
-
-.btn-icon-save {
-  width: auto;
-  margin-top: 0;
-  padding: 0 16px;
-  border-radius: 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-/* CONTROLES PARA MENÚ MÓVIL */
+/* BOTÓN MÓVIL HAMBURGUESA */
 .mobile-toggle-btn {
   display: none;
   position: fixed;
   top: 12px;
   left: 12px;
   z-index: 1000;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   margin: 0;
   border-radius: 12px;
@@ -402,6 +394,7 @@ button:hover { background-color: var(--primary-hover); }
 
 .sidebar-overlay.visible { display: block; }
 
+/* AJUSTES ESPECÍFICOS PARA DISPOSITIVOS MÓVILES (MÁXIMO 768PX) */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -426,21 +419,25 @@ button:hover { background-color: var(--primary-hover); }
 
   .sidebar.open { transform: translateX(0); }
 
-  .main-content { padding: 68px 14px 24px 14px; }
+  .main-content { 
+    padding: 64px 12px 24px 12px !important;
+    width: 100% !important;
+    overflow-x: hidden;
+  }
 
   .meal-card {
     padding: 12px;
-    gap: 12px;
+    gap: 10px;
   }
 
   .meal-img-wrapper {
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
   }
 
   .day-pill {
-    width: 54px;
-    padding: 10px 0;
+    width: 52px;
+    padding: 8px 0;
   }
 }
 
