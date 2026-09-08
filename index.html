@@ -2,103 +2,335 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Nutrición</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>NutriPlan PWA</title>
   
-  <!-- Configuración para iOS PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Nutrición">
+  <meta name="apple-mobile-web-app-title" content="NutriPlan">
   <link rel="apple-touch-icon" href="icon.png">
 
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background-color: #f2f2f7; color: #1c1c1e; }
-    h1, h2 { text-align: center; color: #2c3e50; }
-    .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
-    input, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
-    button { background-color: #34c759; color: white; border: none; font-weight: bold; cursor: pointer; }
-    button:active { background-color: #28a745; }
-    .food-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+    :root {
+      --primary: #34c759;
+      --bg: #f2f2f7;
+      --card-bg: #ffffff;
+      --text: #1c1c1e;
+      --danger: #ff3b30;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding-bottom: 70px; background-color: var(--bg); color: var(--text); }
+    .header { background: var(--card-bg); padding: 16px; text-align: center; font-weight: bold; font-size: 18px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 10; }
+    .container { padding: 16px; }
+    .card { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; }
+    input, select, button, textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+    button { background-color: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+    button:active { opacity: 0.8; }
+    .btn-secondary { background-color: #007aff; }
+    .btn-danger { background-color: var(--danger); }
+    .hidden { display: none !important; }
+    
+    /* Bottom Navigation Bar */
+    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; border-top: 1px solid #e5e5ea; justify-content: space-around; align-items: center; z-index: 100; }
+    .nav-item { flex: 1; text-align: center; color: #8e8e93; font-size: 11px; text-decoration: none; background: none; border: none; padding: 6px 0; margin: 0; }
+    .nav-item.active { color: var(--primary); font-weight: bold; }
+    .nav-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+    /* Tags / Chips */
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { padding: 6px 12px; border-radius: 16px; background: #e5e5ea; font-size: 14px; cursor: pointer; }
+    .chip.selected { background: var(--primary); color: white; }
+    
+    /* Checklist */
+    .checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .checklist-item.done { text-decoration: line-through; opacity: 0.6; }
   </style>
 </head>
 <body>
 
-  <h1>🍏 Mi Alimentación</h1>
-
-  <!-- Buscar en Open Food Facts -->
-  <div class="card">
-    <h2>Buscar Alimento</h2>
-    <input type="text" id="searchInput" placeholder="Ej: Avena, Yogur, Manzana...">
-    <button onclick="buscarAlimento()">Buscar en Base de Datos</button>
-    <div id="searchResults" style="margin-top: 12px;"></div>
+  <!-- PANTALLA: LOGIN / REGISTRO -->
+  <div id="viewAuth" class="container">
+    <div class="card" style="margin-top: 40px;">
+      <h2 style="text-align: center; margin-top: 0;">🥗 NutriPlan</h2>
+      <p style="text-align: center; color: #666; font-size: 14px;">Inicia sesión para acceder a tus recetas y plan de alimentación</p>
+      <input type="email" id="authEmail" placeholder="Correo electrónico">
+      <input type="password" id="authPassword" placeholder="Contraseña">
+      <button onclick="iniciarSesion()">Iniciar Sesión</button>
+      <button onclick="registrarse()" class="btn-secondary">Registrarse</button>
+    </div>
   </div>
 
-  <!-- Registro diario -->
-  <div class="card">
-    <h2>Registro de Hoy</h2>
-    <div id="foodList"></div>
-    <h3>Total Calorías: <span id="totalKcal">0</span> kcal</h3>
+  <!-- VISTA PROTEGIDA (APP COMPLETA) -->
+  <div id="viewApp" class="hidden">
+    <div class="header" id="headerTitle">Mi Plan Semanal</div>
+
+    <div class="container">
+      <!-- PESTAÑA 1: PLAN SEMANAL -->
+      <div id="tabPlan">
+        <div class="card">
+          <h3>📅 Selección de Día</h3>
+          <select id="selectDiaPlan" onchange="cargarPlanDia()">
+            <option value="Lunes">Lunes</option>
+            <option value="Martes">Martes</option>
+            <option value="Miércoles">Miércoles</option>
+            <option value="Jueves">Jueves</option>
+            <option value="Viernes">Viernes</option>
+            <option value="Sábado">Sábado</option>
+            <option value="Domingo">Domingo</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <h3>Menú Programado</h3>
+          <div id="listaPlanContenido">Cargando comidas...</div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 2: RECETAS -->
+      <div id="tabRecetas" class="hidden">
+        <div class="card">
+          <h3>🔍 Filtros de Recetas</h3>
+          <input type="text" id="buscarRecetaInput" placeholder="Buscar por nombre..." onkeyup="filtrarRecetas()">
+          <div class="chips">
+            <span class="chip" onclick="toggleFiltro(this, 'rapida')">⚡ Rápidas (<15 min)</span>
+            <span class="chip" onclick="toggleFiltro(this, 'proteina')">💪 Alta Proteína</span>
+          </div>
+          <button onclick="mostrarFormularioNuevaReceta()" style="margin-top: 12px;">+ Nueva Receta</button>
+        </div>
+
+        <div id="formularioRecetaView" class="card hidden">
+          <h3 id="formRecetaTitle">Crear Receta</h3>
+          <input type="text" id="recetaNombre" placeholder="Nombre de la receta">
+          <select id="recetaCategoria">
+            <option value="Desayuno">Desayuno</option>
+            <option value="Comida">Comida</option>
+            <option value="Cena">Cena</option>
+            <option value="Snack">Snack</option>
+          </select>
+          <input type="number" id="recetaTiempo" placeholder="Tiempo en minutos">
+          <textarea id="recetaPasos" placeholder="Pasos de preparación..."></textarea>
+          <button onclick="guardarReceta()">Guardar Receta</button>
+          <button onclick="ocultarFormularioNuevaReceta()" class="btn-danger" style="margin-top: 6px;">Cancelar</button>
+        </div>
+
+        <div id="listaRecetasContenido">Cargando recetas...</div>
+      </div>
+
+      <!-- PESTAÑA 3: LISTA DE LA COMPRA -->
+      <div id="tabCompra" class="hidden">
+        <div class="card">
+          <h3>🛒 Añadir Producto</h3>
+          <input type="text" id="compraItemInput" placeholder="Ej: Leche, Huevos, Manzanas...">
+          <button onclick="agregarItemCompra()">Añadir a la lista</button>
+        </div>
+
+        <div class="card">
+          <h3>Lista de la Compra</h3>
+          <div id="listaCompraContenido">Cargando lista...</div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 4: PERFIL -->
+      <div id="tabPerfil" class="hidden">
+        <div class="card">
+          <h3>👤 Mi Cuenta</h3>
+          <p id="perfilEmailText" style="color: #666;"></p>
+          <button onclick="cerrarSesion()" class="btn-danger">Cerrar Sesión</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Navegación Inferior -->
+    <nav class="nav-bar">
+      <button class="nav-item active" onclick="cambiarTab('Plan', this)">
+        <span class="nav-icon">📅</span>Plan
+      </button>
+      <button class="nav-item" onclick="cambiarTab('Recetas', this)">
+        <span class="nav-icon">📖</span>Recetas
+      </button>
+      <button class="nav-item" onclick="cambiarTab('Compra', this)">
+        <span class="nav-icon">🛒</span>Compra
+      </button>
+      <button class="nav-item" onclick="cambiarTab('Perfil', this)">
+        <span class="nav-icon">👤</span>Perfil
+      </button>
+    </nav>
   </div>
 
   <script>
-    // Registro del Service Worker
+    // ⚠️ SUSTITUIR CON TUS CREDENCIALES DE SUPABASE
+    const SUPABASE_URL = 'https://TU_PROJECT_ID.supabase.co';
+    const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let usuarioActual = null;
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
 
-    let diario = JSON.parse(localStorage.getItem('diarioComidas')) || [];
+    async function verificarSesion() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        usuarioActual = session.user;
+        document.getElementById('viewAuth').classList.add('hidden');
+        document.getElementById('viewApp').classList.remove('hidden');
+        document.getElementById('perfilEmailText').innerText = usuarioActual.email;
+        cargarPlanDia();
+      } else {
+        document.getElementById('viewAuth').classList.remove('hidden');
+        document.getElementById('viewApp').classList.add('hidden');
+      }
+    }
 
-    function renderDiario() {
-      const list = document.getElementById('foodList');
-      list.innerHTML = '';
-      let total = 0;
-      diario.forEach((item, index) => {
-        total += item.kcal;
-        list.innerHTML += `
-          <div class="food-item">
-            <span><strong>${item.nombre}</strong> (${item.kcal} kcal)</span>
-            <button onclick="eliminar(${index})" style="width: auto; padding: 4px 8px; background: #ff3b30;">X</button>
+    async function registrarse() {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) alert("Error: " + error.message);
+      else alert("Registro completado. ¡Inicia sesión!");
+    }
+
+    async function iniciarSesion() {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert("Error: " + error.message);
+      else verificarSesion();
+    }
+
+    async function cerrarSesion() {
+      await supabase.auth.signOut();
+      usuarioActual = null;
+      verificarSesion();
+    }
+
+    // Control de Navegación por Pestañas
+    function cambiarTab(tabName, btn) {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.getElementById('tabPlan').classList.add('hidden');
+      document.getElementById('tabRecetas').classList.add('hidden');
+      document.getElementById('tabCompra').classList.add('hidden');
+      document.getElementById('tabPerfil').classList.add('hidden');
+
+      document.getElementById('tab' + tabName).classList.remove('hidden');
+      document.getElementById('headerTitle').innerText = 
+        tabName === 'Plan' ? 'Mi Plan Semanal' :
+        tabName === 'Recetas' ? 'Biblioteca de Recetas' :
+        tabName === 'Compra' ? 'Lista de la Compra' : 'Mi Perfil';
+
+      if (tabName === 'Recetas') cargarRecetas();
+      if (tabName === 'Compra') cargarListaCompra();
+    }
+
+    // Lógica para Plan Semanal
+    async function cargarPlanDia() {
+      const dia = document.getElementById('selectDiaPlan').value;
+      const list = document.getElementById('listaPlanContenido');
+      list.innerHTML = 'Cargando...';
+
+      const { data, error } = await supabase
+        .from('plan_semanal')
+        .select('*, recetas(nombre)')
+        .eq('dia_semana', dia);
+
+      if (error || !data || data.length === 0) {
+        list.innerHTML = '<p style="color:#8e8e93;">No hay comidas programadas para este día.</p>';
+        return;
+      }
+
+      list.innerHTML = data.map(item => `
+        <div class="checklist-item">
+          <div>
+            <strong>${item.comida_tipo}:</strong> ${item.recetas ? item.recetas.nombre : 'Plato personalizado'}
           </div>
-        `;
-      });
-      document.getElementById('totalKcal').innerText = total;
-      localStorage.setItem('diarioComidas', JSON.stringify(diario));
+        </div>
+      `).join('');
     }
 
-    async function buscarAlimento() {
-      const query = document.getElementById('searchInput').value;
-      if (!query) return;
-      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query}&search_simple=1&action=process&json=1`);
-      const data = await res.json();
-      const resultsDiv = document.getElementById('searchResults');
-      resultsDiv.innerHTML = '';
+    // Lógica para Recetas
+    async function cargarRecetas() {
+      const list = document.getElementById('listaRecetasContenido');
+      const { data, error } = await supabase.from('recetas').select('*').order('created_at', { ascending: false });
 
-      data.products.slice(0, 5).forEach(prod => {
-        const nombre = prod.product_name || 'Sin nombre';
-        const kcal = Math.round(prod.nutriments['energy-kcal_100g'] || 0);
-        resultsDiv.innerHTML += `
-          <div class="food-item">
-            <span>${nombre} - <strong>${kcal} kcal / 100g</strong></span>
-            <button onclick="agregar('${nombre.replace(/'/g, "")}', ${kcal})" style="width: auto; padding: 6px 12px;">Añadir</button>
-          </div>
-        `;
-      });
+      if (error || !data || data.length === 0) {
+        list.innerHTML = '<p style="color:#8e8e93;">No tienes recetas guardadas aún.</p>';
+        return;
+      }
+
+      list.innerHTML = data.map(r => `
+        <div class="card">
+          <h4 style="margin: 0 0 8px 0;">${r.nombre} <span style="font-size:12px; color:#666;">(${r.categoria})</span></h4>
+          <p style="font-size: 14px; margin: 4px 0;">⏱️ ${r.tiempo_preparacion || 0} min</p>
+          <p style="font-size: 14px; color: #444;">${r.pasos || 'Sin instrucciones'}</p>
+        </div>
+      `).join('');
     }
 
-    function agregar(nombre, kcal) {
-      diario.push({ nombre, kcal });
-      renderDiario();
-      document.getElementById('searchResults').innerHTML = '';
-      document.getElementById('searchInput').value = '';
+    function mostrarFormularioNuevaReceta() { document.getElementById('formularioRecetaView').classList.remove('hidden'); }
+    function ocultarFormularioNuevaReceta() { document.getElementById('formularioRecetaView').classList.add('hidden'); }
+
+    async function guardarReceta() {
+      const nombre = document.getElementById('recetaNombre').value;
+      const categoria = document.getElementById('recetaCategoria').value;
+      const tiempo_preparacion = document.getElementById('recetaTiempo').value;
+      const pasos = document.getElementById('recetaPasos').value;
+
+      const { error } = await supabase.from('recetas').insert([{
+        user_id: usuarioActual.id,
+        nombre, categoria, tiempo_preparacion, pasos
+      }]);
+
+      if (error) alert("Error al guardar: " + error.message);
+      else {
+        ocultarFormularioNuevaReceta();
+        cargarRecetas();
+      }
     }
 
-    function eliminar(index) {
-      diario.splice(index, 1);
-      renderDiario();
+    // Lógica para Lista de la Compra
+    async function cargarListaCompra() {
+      const list = document.getElementById('listaCompraContenido');
+      const { data, error } = await supabase.from('lista_compra').select('*').order('created_at', { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        list.innerHTML = '<p style="color:#8e8e93;">La lista de la compra está vacía.</p>';
+        return;
+      }
+
+      list.innerHTML = data.map(i => `
+        <div class="checklist-item ${i.comprado ? 'done' : ''}">
+          <span onclick="toggleItemCompra('${i.id}', ${!i.comprado})">${i.item}</span>
+          <button onclick="eliminarItemCompra('${i.id}')" class="btn-danger" style="width:auto; padding: 4px 8px;">X</button>
+        </div>
+      `).join('');
     }
 
-    renderDiario();
+    async function agregarItemCompra() {
+      const item = document.getElementById('compraItemInput').value;
+      if (!item) return;
+
+      await supabase.from('lista_compra').insert([{ user_id: usuarioActual.id, item }]);
+      document.getElementById('compraItemInput').value = '';
+      cargarListaCompra();
+    }
+
+    async function toggleItemCompra(id, comprado) {
+      await supabase.from('lista_compra').update({ comprado }).eq('id', id);
+      cargarListaCompra();
+    }
+
+    async function eliminarItemCompra(id) {
+      await supabase.from('lista_compra').delete().eq('id', id);
+      cargarListaCompra();
+    }
+
+    verificarSesion();
   </script>
 </body>
 </html>
