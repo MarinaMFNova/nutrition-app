@@ -249,7 +249,7 @@ button:hover { background-color: var(--primary-hover); }
   width: 100%;
 }
 
-/* CARROUSEL DE DÍAS EN MÓVIL SÚPER FLUIDO */
+/* CARROUSEL DE DÍAS */
 .days-selector-container {
   display: flex;
   gap: 8px;
@@ -259,7 +259,7 @@ button:hover { background-color: var(--primary-hover); }
   scrollbar-width: none;
   width: 100%;
   max-width: 100%;
-  padding-right: 16px; /* Asegura espacio suficiente para ver el Domingo sin cortes */
+  padding-right: 16px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -299,6 +299,7 @@ button:hover { background-color: var(--primary-hover); }
 .day-pill.active .day-name,
 .day-pill.active .day-number { color: var(--primary); }
 
+/* TARJETAS DE PLAN SEMANAL (FIX AJUSTE PERFECTO DEL DESPLEGABLE) */
 .meal-card {
   background-color: var(--card-bg);
   border-radius: 18px;
@@ -310,6 +311,9 @@ button:hover { background-color: var(--primary-hover); }
   align-items: center;
   gap: 14px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .meal-img-wrapper {
@@ -334,6 +338,8 @@ button:hover { background-color: var(--primary-hover); }
 .meal-info {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .meal-badge {
@@ -347,16 +353,24 @@ button:hover { background-color: var(--primary-hover); }
   margin-bottom: 6px;
 }
 
+.select-mode-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .meal-select-custom {
   width: 100%;
   margin-top: 4px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   font-size: 14px;
   font-weight: 600;
   background-color: var(--input-bg);
   color: var(--text-main);
+  box-sizing: border-box;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }
 
 .mobile-toggle-btn {
@@ -435,7 +449,7 @@ button:hover { background-color: var(--primary-hover); }
   }
 
   .meal-card {
-    padding: 12px;
+    padding: 10px 12px;
     gap: 10px;
   }
 
@@ -444,10 +458,14 @@ button:hover { background-color: var(--primary-hover); }
     height: 48px;
   }
 
-  /* Ajuste de ancho de pastillas en móvil para caber perfectamente */
   .day-pill {
     width: 48px;
     padding: 8px 0;
+  }
+
+  .meal-select-custom {
+    font-size: 13px;
+    padding: 8px 6px;
   }
 }
 
