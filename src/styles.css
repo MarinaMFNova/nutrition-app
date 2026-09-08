@@ -52,7 +52,35 @@ body {
   min-height: 100vh;
 }
 
-/* EVITAR ZOOM EN MÓVILES AL PULSAR INPUTS DE MENOS DE 16PX */
+/* CENTRADO PERFECTO DE AUTENTICACIÓN (PC Y MÓVIL) */
+.auth-wrapper {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: var(--bg-main);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--card-bg);
+  border-radius: 20px;
+  padding: 32px 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
 input, select, textarea {
   width: 100%;
   padding: 12px 14px;
@@ -61,12 +89,48 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 16px; /* Evita que iOS / Android haga zoom automático */
+  font-size: 16px;
   outline: none;
 }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
+}
+
+/* ENVOLTORIO PARA EL OJO EN LA CONTRASEÑA */
+.password-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.password-wrapper input {
+  margin-top: 0;
+  padding-right: 48px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.6;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-password:hover {
+  opacity: 1;
 }
 
 button {
@@ -95,12 +159,12 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
+/* LAYOUT PRINCIPAL Y SIDEBAR */
 .layout-container {
   display: flex;
   min-height: 100vh;
 }
 
-/* SIDEBAR ESCRITORIO */
 .sidebar {
   width: 250px;
   background-color: var(--sidebar-bg);
@@ -295,7 +359,7 @@ button:hover { background-color: var(--primary-hover); }
   white-space: nowrap;
 }
 
-/* CONTROLES PARA MENÚ MÓVIL (DESPLEGABLE / DRAWER) */
+/* CONTROLES PARA MENÚ MÓVIL */
 .mobile-toggle-btn {
   display: none;
   position: fixed;
@@ -336,11 +400,8 @@ button:hover { background-color: var(--primary-hover); }
   z-index: 1000;
 }
 
-.sidebar-overlay.visible {
-  display: block;
-}
+.sidebar-overlay.visible { display: block; }
 
-/* ADAPTABILIDAD RESPONSIVE MÓVIL */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -349,15 +410,9 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 @media (max-width: 768px) {
-  .mobile-toggle-btn {
-    display: flex;
-  }
+  .mobile-toggle-btn { display: flex; }
+  .sidebar-close-btn { display: block; }
 
-  .sidebar-close-btn {
-    display: block;
-  }
-
-  /* LA SIDEBAR SE CONVIERTE EN DRAWER DESPLEGABLE */
   .sidebar {
     position: fixed;
     top: 0;
@@ -365,17 +420,13 @@ button:hover { background-color: var(--primary-hover); }
     bottom: 0;
     height: 100vh;
     width: 270px;
-    transform: translateX(-100%); /* Oculta a la izquierda por defecto */
+    transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   }
 
-  .sidebar.open {
-    transform: translateX(0); /* Desliza desde la izquierda al abrir */
-  }
+  .sidebar.open { transform: translateX(0); }
 
-  .main-content {
-    padding: 68px 14px 24px 14px; /* Espacio superior para el botón de menú */
-  }
+  .main-content { padding: 68px 14px 24px 14px; }
 
   .meal-card {
     padding: 12px;
