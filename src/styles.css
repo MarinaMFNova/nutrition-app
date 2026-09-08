@@ -6,7 +6,6 @@
   --text-muted: #64748b;
   --border: #e2e8f0;
   
-  /* Paleta Turquesa / Azul Pastel "Little Lunches" */
   --primary: #3aacb8;
   --primary-hover: #2e96a1;
   --primary-light: #e6f6f8;
@@ -53,7 +52,6 @@ body {
   min-height: 100vh;
 }
 
-/* LAYOUT AUTENTICACIÓN */
 .auth-wrapper {
   min-height: 100vh;
   display: flex;
@@ -112,48 +110,22 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
-.password-wrapper {
-  position: relative;
-  width: 100%;
-  margin-top: 8px;
-}
-
-.password-wrapper input {
-  margin-top: 0;
-  padding-right: 44px;
-}
-
-.toggle-password {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
-  width: auto;
-  font-size: 18px;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-/* LAYOUT PRINCIPAL Y SIDEBAR */
 .layout-container {
   display: flex;
   min-height: 100vh;
 }
 
+/* SIDEBAR LATERAL SIEMPRE VISIBLE */
 .sidebar {
   width: 240px;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border);
-  padding: 20px 16px;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
+  min-height: 100vh;
 }
 
 .brand-title {
@@ -196,14 +168,20 @@ button:hover { background-color: var(--primary-hover); }
 
 .nav-item.active { font-weight: 700; }
 
+.user-profile-sidebar {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
 .main-content {
   flex: 1;
   padding: 32px;
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
-/* GRID PLAN SEMANAL CON CALENDARIO CENTRADO A LA DERECHA */
 .plan-grid-wrapper {
   display: grid;
   grid-template-columns: 1fr 280px;
@@ -302,11 +280,6 @@ button:hover { background-color: var(--primary-hover); }
   margin-bottom: 6px;
 }
 
-:root[data-theme="dark"] .meal-badge {
-  background-color: #78350f;
-  color: #fef3c7;
-}
-
 .meal-select-custom {
   width: 100%;
   margin-top: 4px;
@@ -336,7 +309,7 @@ button:hover { background-color: var(--primary-hover); }
   white-space: nowrap;
 }
 
-/* RESPONSIVE MÓVIL Y ADAPTABILIDAD */
+/* RESPONSIVE MÓVIL CON SIDEBAR LATERAL COMPACTA */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -345,77 +318,63 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 @media (max-width: 768px) {
-  .layout-container {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  /* BARRA NAVEGACIÓN INFERIOR EN MÓVIL */
   .sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 64px;
-    flex-direction: row;
+    width: 68px; /* Sidebar estrecha lateral para móvil */
+    padding: 16px 6px;
     align-items: center;
-    justify-content: space-around;
-    padding: 0 12px;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    background-color: var(--sidebar-bg);
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-    z-index: 1000;
   }
 
-  .brand-title, 
-  .user-profile-sidebar, 
+  .brand-title {
+    font-size: 0; /* Oculta texto, deja el emoji */
+    margin-bottom: 16px;
+  }
+  .brand-title::before {
+    content: "👨‍🍳";
+    font-size: 22px;
+  }
+
   #btnQuickAdd {
-    display: none !important;
+    font-size: 0;
+    padding: 10px;
+    border-radius: 50%;
+    margin-bottom: 16px;
   }
-
-  .sidebar-menu {
-    flex-direction: row;
-    width: 100%;
-    justify-content: space-around;
-    gap: 4px;
+  #btnQuickAdd::before {
+    content: "+";
+    font-size: 20px;
   }
 
   .nav-item {
-    flex-direction: column;
-    gap: 2px;
-    padding: 6px 10px;
-    font-size: 11px;
-    text-align: center;
     justify-content: center;
-    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 0; /* Oculta texto de los botones para ahorrar espacio */
   }
 
   .nav-item span {
-    font-size: 18px;
+    font-size: 20px;
+  }
+
+  .user-profile-sidebar #userEmailNav {
+    display: none; /* Oculta email largo en móvil */
+  }
+
+  .user-profile-sidebar .nav-item {
+    font-size: 0;
+    justify-content: center;
   }
 
   .main-content {
-    padding: 16px;
-    padding-bottom: 90px !important;
-    width: 100%;
-    box-sizing: border-box;
+    padding: 16px 12px;
   }
 
   .meal-card {
     padding: 12px;
-    gap: 12px;
+    gap: 10px;
   }
 
   .meal-img-wrapper {
-    width: 56px;
-    height: 56px;
-  }
-
-  .day-pill {
     width: 52px;
-    padding: 8px 0;
+    height: 52px;
   }
 }
 
