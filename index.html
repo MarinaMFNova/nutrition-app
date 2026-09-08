@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Nutrición</title>
+  
+  <!-- Configuración para iOS PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Nutrición">
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background-color: #f2f2f7; color: #1c1c1e; }
+    h1, h2 { text-align: center; color: #2c3e50; }
+    .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    input, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+    button { background-color: #34c759; color: white; border: none; font-weight: bold; cursor: pointer; }
+    button:active { background-color: #28a745; }
+    .food-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+
+  <h1>🍏 Mi Alimentación</h1>
+
+  <!-- Buscar en Open Food Facts -->
+  <div class="card">
+    <h2>Buscar Alimento</h2>
+    <input type="text" id="searchInput" placeholder="Ej: Avena, Yogur, Manzana...">
+    <button onclick="buscarAlimento()">Buscar en Base de Datos</button>
+    <div id="searchResults" style="margin-top: 12px;"></div>
+  </div>
+
+  <!-- Registro diario -->
+  <div class="card">
+    <h2>Registro de Hoy</h2>
+    <div id="foodList"></div>
+    <h3>Total Calorías: <span id="totalKcal">0</span> kcal</h3>
+  </div>
+
+  <script>
+    // Registro del Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    let diario = JSON.parse(localStorage.getItem('diarioComidas')) || [];
+
+    function renderDiario() {
+      const list = document.getElementById('foodList');
+      list.innerHTML = '';
+      let total = 0;
+      diario.forEach((item, index) => {
+        total += item.kcal;
+        list.innerHTML += `
+          <div class="food-item">
+            <span><strong>${item.nombre}</strong> (${item.kcal} kcal)</span>
+            <button onclick="eliminar(${index})" style="width: auto; padding: 4px 8px; background: #ff3b30;">X</button>
+          </div>
+        `;
+      });
+      document.getElementById('totalKcal').innerText = total;
+      localStorage.setItem('diarioComidas', JSON.stringify(diario));
+    }
+
+    async function buscarAlimento() {
+      const query = document.getElementById('searchInput').value;
+      if (!query) return;
+      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query}&search_simple=1&action=process&json=1`);
+      const data = await res.json();
+      const resultsDiv = document.getElementById('searchResults');
+      resultsDiv.innerHTML = '';
+
+      data.products.slice(0, 5).forEach(prod => {
+        const nombre = prod.product_name || 'Sin nombre';
+        const kcal = Math.round(prod.nutriments['energy-kcal_100g'] || 0);
+        resultsDiv.innerHTML += `
+          <div class="food-item">
+            <span>${nombre} - <strong>${kcal} kcal / 100g</strong></span>
+            <button onclick="agregar('${nombre.replace(/'/g, "")}', ${kcal})" style="width: auto; padding: 6px 12px;">Añadir</button>
+          </div>
+        `;
+      });
+    }
+
+    function agregar(nombre, kcal) {
+      diario.push({ nombre, kcal });
+      renderDiario();
+      document.getElementById('searchResults').innerHTML = '';
+      document.getElementById('searchInput').value = '';
+    }
+
+    function eliminar(index) {
+      diario.splice(index, 1);
+      renderDiario();
+    }
+
+    renderDiario();
+  </script>
+</body>
+</html>
