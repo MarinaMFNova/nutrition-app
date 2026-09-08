@@ -38,7 +38,6 @@
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* RESETS PARA NAVEGACIÓN MÓVIL PURE RESPONSIVE */
 html, body {
   width: 100%;
   max-width: 100%;
@@ -97,7 +96,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 16px; /* Evita auto-zoom en iPhone/Android */
+  font-size: 16px;
   outline: none;
   box-sizing: border-box;
 }
@@ -168,8 +167,13 @@ button:hover { background-color: var(--primary-hover); }
   max-width: 100%;
 }
 
+/* SIDEBAR FIX EN ESCRITORIO Y MÓVIL */
 .sidebar {
   width: 250px;
+  height: 100vh;
+  height: 100dvh; /* Adapta a la barra del navegador móvil */
+  position: sticky;
+  top: 0;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   padding: 20px 16px;
@@ -179,6 +183,7 @@ button:hover { background-color: var(--primary-hover); }
   flex-shrink: 0;
   transition: transform 0.3s ease;
   z-index: 1001;
+  overflow-y: auto; /* Permite scroll interno si la pantalla es muy corta */
 }
 
 .brand-title {
@@ -325,7 +330,7 @@ button:hover { background-color: var(--primary-hover); }
 
 .meal-info {
   flex: 1;
-  min-width: 0; /* Previene el desbordamiento de texto */
+  min-width: 0;
 }
 
 .meal-badge {
@@ -351,7 +356,6 @@ button:hover { background-color: var(--primary-hover); }
   color: var(--text-main);
 }
 
-/* BOTÓN MÓVIL HAMBURGUESA */
 .mobile-toggle-btn {
   display: none;
   position: fixed;
@@ -394,7 +398,7 @@ button:hover { background-color: var(--primary-hover); }
 
 .sidebar-overlay.visible { display: block; }
 
-/* AJUSTES ESPECÍFICOS PARA DISPOSITIVOS MÓVILES (MÁXIMO 768PX) */
+/* ADAPTABILIDAD MÓVIL */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -406,15 +410,18 @@ button:hover { background-color: var(--primary-hover); }
   .mobile-toggle-btn { display: flex; }
   .sidebar-close-btn { display: block; }
 
+  /* SIDEBAR EN MÓVIL (DESPLAZAMIENTO COMPLETO INDEPENDIENTE) */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     height: 100vh;
+    height: 100dvh;
     width: 270px;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    overflow-y: auto; /* Permite hacer scroll para ver cerrar sesión siempre */
   }
 
   .sidebar.open { transform: translateX(0); }
