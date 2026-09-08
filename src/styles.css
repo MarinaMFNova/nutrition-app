@@ -85,6 +85,7 @@ body {
   padding: 20px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  width: 100%;
   max-width: 100%;
 }
 
@@ -167,11 +168,10 @@ button:hover { background-color: var(--primary-hover); }
   max-width: 100%;
 }
 
-/* SIDEBAR FIX EN ESCRITORIO Y MÓVIL */
 .sidebar {
   width: 250px;
   height: 100vh;
-  height: 100dvh; /* Adapta a la barra del navegador móvil */
+  height: 100dvh;
   position: sticky;
   top: 0;
   background-color: var(--sidebar-bg);
@@ -183,7 +183,7 @@ button:hover { background-color: var(--primary-hover); }
   flex-shrink: 0;
   transition: transform 0.3s ease;
   z-index: 1001;
-  overflow-y: auto; /* Permite scroll interno si la pantalla es muy corta */
+  overflow-y: auto;
 }
 
 .brand-title {
@@ -249,22 +249,25 @@ button:hover { background-color: var(--primary-hover); }
   width: 100%;
 }
 
+/* CARROUSEL DE DÍAS EN MÓVIL SÚPER FLUIDO */
 .days-selector-container {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
   margin-bottom: 20px;
   scrollbar-width: none;
   width: 100%;
   max-width: 100%;
+  padding-right: 16px; /* Asegura espacio suficiente para ver el Domingo sin cortes */
+  -webkit-overflow-scrolling: touch;
 }
 
 .days-selector-container::-webkit-scrollbar { display: none; }
 
 .day-pill {
   flex: 0 0 auto;
-  width: 58px;
+  width: 54px;
   padding: 10px 0;
   border-radius: 14px;
   background-color: var(--card-bg);
@@ -398,7 +401,7 @@ button:hover { background-color: var(--primary-hover); }
 
 .sidebar-overlay.visible { display: block; }
 
-/* ADAPTABILIDAD MÓVIL */
+/* ADAPTABILIDAD RESPONSIVE MÓVIL */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -410,7 +413,6 @@ button:hover { background-color: var(--primary-hover); }
   .mobile-toggle-btn { display: flex; }
   .sidebar-close-btn { display: block; }
 
-  /* SIDEBAR EN MÓVIL (DESPLAZAMIENTO COMPLETO INDEPENDIENTE) */
   .sidebar {
     position: fixed;
     top: 0;
@@ -421,13 +423,13 @@ button:hover { background-color: var(--primary-hover); }
     width: 270px;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-    overflow-y: auto; /* Permite hacer scroll para ver cerrar sesión siempre */
+    overflow-y: auto;
   }
 
   .sidebar.open { transform: translateX(0); }
 
   .main-content { 
-    padding: 64px 12px 24px 12px !important;
+    padding: 64px 10px 24px 10px !important;
     width: 100% !important;
     overflow-x: hidden;
   }
@@ -442,8 +444,9 @@ button:hover { background-color: var(--primary-hover); }
     height: 48px;
   }
 
+  /* Ajuste de ancho de pastillas en móvil para caber perfectamente */
   .day-pill {
-    width: 52px;
+    width: 48px;
     padding: 8px 0;
   }
 }
