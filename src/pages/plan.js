@@ -10,6 +10,20 @@ export function renderPlanView(usuarioActual) {
     </svg>
   `;
 
+  // ICONOS VECTORIALES PLANOS (SIN REBORDE NI ESTILO EMOJI DE SISTEMA)
+  const checkSVG = `
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  `;
+
+  const crossSVG = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  `;
+
   let fechaActual = new Date();
   
   function getLunesActual(fecha) {
@@ -53,10 +67,7 @@ export function renderPlanView(usuarioActual) {
   let diaSeleccionadoObj = diasCalculados.find(d => d.esHoy) || diasCalculados[0];
 
   container.innerHTML = `
-    <!-- CONTENEDOR GRID DOS COLUMNAS -->
     <div class="plan-grid-wrapper">
-      
-      <!-- COLUMNA IZQUIERDA: PLANIFICADOR DE COMIDAS -->
       <div>
         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
           <div>
@@ -78,14 +89,10 @@ export function renderPlanView(usuarioActual) {
           </div>
         </div>
 
-        <!-- SELECTOR DE DÍAS HORIZONTAL -->
         <div class="days-selector-container" id="pillsContainer"></div>
-
-        <!-- COMIDAS DEL DÍA -->
         <div id="listaComidasPlan">Cargando menú...</div>
       </div>
 
-      <!-- COLUMNA DERECHA: CALENDARIO CENTRADO -->
       <div class="card" style="padding: 18px; border-radius: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <h4 style="margin: 0; font-size: 15px; font-weight: 700;" id="miniCalTitle">Calendario</h4>
@@ -101,7 +108,6 @@ export function renderPlanView(usuarioActual) {
 
         <div id="miniCalGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;"></div>
       </div>
-
     </div>
   `;
 
@@ -232,13 +238,13 @@ export function renderPlanView(usuarioActual) {
       const recetaAsignada = asignacion && misRecetas ? misRecetas.find(r => r.id === asignacion.receta_id) : null;
       
       const textoPersonalizado = asignacion && asignacion.nota_personalizada ? asignacion.nota_personalizada : '';
-      const esOtro = asignacion && !asignacion.receta_id && textoPersonalizado;
+      const esOtroGuardado = asignacion && !asignacion.receta_id && textoPersonalizado;
 
       const imgUrl = obtenerImagenUrl(recetaAsignada);
       
       let opciones = `
         <option value="">+ Añadir receta...</option>
-        <option value="__CUSTOM__" ${esOtro ? 'selected' : ''}> Otro</option>
+        <option value="__CUSTOM__">✏️ Otro (Café, fruta...)</option>
       `;
 
       if (misRecetas && misRecetas.length > 0) {
@@ -257,45 +263,71 @@ export function renderPlanView(usuarioActual) {
         <div class="meal-img-wrapper">
           ${imgUrl 
             ? `<img src="${imgUrl}" alt="${recetaAsignada ? recetaAsignada.nombre : tipo.label}" />`
-            : (esOtro ? `<span style="font-size: 30px;">☕</span>` : chefHatSVG)
+            : (esOtroGuardado ? `<span style="font-size: 30px;">☕</span>` : chefHatSVG)
           }
         </div>
         
-        <div class="meal-info">
+        <div class="meal-info" style="width: 100%;">
           <span class="meal-badge">${tipo.label}</span>
           
-          <select class="meal-select-custom">
-            ${opciones}
-          </select>
+          <div class="select-mode-wrapper ${esOtroGuardado ? 'hidden' : ''}">
+            <select class="meal-select-custom">
+              ${opciones}
+            </select>
 
-          <!-- BOX DE TEXTO LIBRE AL ELEGIR "OTRO" -->
-          <div class="custom-input-wrapper ${esOtro ? '' : 'hidden'}" style="margin-top: 8px;">
-            <input type="text" placeholder="Escribe tu comida (ej: Café con almendras)..." value="${textoPersonalizado}">
-            <button type="button" class="btn-icon-save">Guardar</button>
+            <!-- BOTONES PLANOS SVG SIN REBORDE DE FONDO -->
+            <div class="custom-input-wrapper hidden" style="margin-top: 8px; display: flex; align-items: center; gap: 4px;">
+              <input type="text" placeholder="Ej: Café con fruta..." value="${textoPersonalizado}" style="flex: 1; margin: 0;">
+              
+              <button type="button" class="btn-confirm-custom" style="width: 36px; height: 36px; padding: 0; margin: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Guardar">
+                ${checkSVG}
+              </button>
+              
+              <button type="button" class="btn-cancel-custom" style="width: 36px; height: 36px; padding: 0; margin: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Cancelar">
+                ${crossSVG}
+              </button>
+            </div>
+          </div>
+
+          <div class="saved-custom-display ${esOtroGuardado ? '' : 'hidden'}" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 8px 12px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
+            <span style="font-size: 15px; font-weight: 600; color: var(--text-main);" class="custom-text-val">${textoPersonalizado}</span>
+            
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-edit-custom btn-outline" style="width: 32px; height: 32px; padding: 0; margin: 0; border-radius: 8px;" title="Editar">✏️</button>
+              <button type="button" class="btn-delete-custom btn-outline" style="width: 32px; height: 32px; padding: 0; margin: 0; border-radius: 8px; color: var(--danger);" title="Eliminar">🗑️</button>
+            </div>
           </div>
 
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
             ${recetaAsignada 
               ? `⏱️ ${recetaAsignada.tiempo_preparacion || 15} min` 
-              : (esOtro ? `☕ ${textoPersonalizado}` : 'Sin programar')
+              : (esOtroGuardado ? `☕ Personalizado` : 'Sin programar')
             }
           </div>
         </div>
       `;
 
+      const selectModeWrapper = card.querySelector('.select-mode-wrapper');
+      const savedCustomDisplay = card.querySelector('.saved-custom-display');
+      
       const select = card.querySelector('select');
-      const customWrapper = card.querySelector('.custom-input-wrapper');
+      const customInputWrapper = card.querySelector('.custom-input-wrapper');
       const inputCustom = card.querySelector('.custom-input-wrapper input');
-      const btnSaveCustom = card.querySelector('.btn-icon-save');
+      
+      const btnConfirmCustom = card.querySelector('.btn-confirm-custom');
+      const btnCancelCustom = card.querySelector('.btn-cancel-custom');
+      
+      const btnEditCustom = card.querySelector('.btn-edit-custom');
+      const btnDeleteCustom = card.querySelector('.btn-delete-custom');
 
       select.addEventListener('change', async (e) => {
         const val = e.target.value;
 
         if (val === '__CUSTOM__') {
-          customWrapper.classList.remove('hidden');
+          customInputWrapper.classList.remove('hidden');
           inputCustom.focus();
         } else {
-          customWrapper.classList.add('hidden');
+          customInputWrapper.classList.add('hidden');
           
           if (!val) {
             if (asignacion) {
@@ -322,7 +354,7 @@ export function renderPlanView(usuarioActual) {
         }
       });
 
-      btnSaveCustom.addEventListener('click', async () => {
+      btnConfirmCustom.addEventListener('click', async () => {
         const txt = inputCustom.value.trim();
         if (!txt) return;
 
@@ -340,6 +372,25 @@ export function renderPlanView(usuarioActual) {
             receta_id: null,
             nota_personalizada: txt
           }]);
+        }
+        cargarMenuDia();
+      });
+
+      btnCancelCustom.addEventListener('click', () => {
+        cargarMenuDia();
+      });
+
+      btnEditCustom.addEventListener('click', () => {
+        savedCustomDisplay.classList.add('hidden');
+        selectModeWrapper.classList.remove('hidden');
+        customInputWrapper.classList.remove('hidden');
+        select.value = '__CUSTOM__';
+        inputCustom.focus();
+      });
+
+      btnDeleteCustom.addEventListener('click', async () => {
+        if (asignacion) {
+          await supabase.from('plan_semanal').delete().eq('id', asignacion.id);
         }
         cargarMenuDia();
       });
