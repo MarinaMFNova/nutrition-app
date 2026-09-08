@@ -52,22 +52,7 @@ body {
   min-height: 100vh;
 }
 
-.auth-wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.card {
-  background-color: var(--card-bg);
-  border-radius: 20px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
+/* EVITAR ZOOM EN MÓVILES AL PULSAR INPUTS DE MENOS DE 16PX */
 input, select, textarea {
   width: 100%;
   padding: 12px 14px;
@@ -76,7 +61,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 16px; /* Evita que iOS / Android haga zoom automático */
   outline: none;
 }
 
@@ -115,17 +100,18 @@ button:hover { background-color: var(--primary-hover); }
   min-height: 100vh;
 }
 
-/* SIDEBAR LATERAL SIEMPRE VISIBLE */
+/* SIDEBAR ESCRITORIO */
 .sidebar {
-  width: 240px;
+  width: 250px;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border);
-  padding: 20px 14px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  min-height: 100vh;
+  transition: transform 0.3s ease;
+  z-index: 1001;
 }
 
 .brand-title {
@@ -286,7 +272,7 @@ button:hover { background-color: var(--primary-hover); }
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   background-color: var(--input-bg);
   color: var(--text-main);
@@ -309,7 +295,52 @@ button:hover { background-color: var(--primary-hover); }
   white-space: nowrap;
 }
 
-/* RESPONSIVE MÓVIL CON SIDEBAR LATERAL COMPACTA */
+/* CONTROLES PARA MENÚ MÓVIL (DESPLEGABLE / DRAWER) */
+.mobile-toggle-btn {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  border-radius: 12px;
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+}
+
+/* ADAPTABILIDAD RESPONSIVE MÓVIL */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
@@ -318,63 +349,47 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 @media (max-width: 768px) {
+  .mobile-toggle-btn {
+    display: flex;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+
+  /* LA SIDEBAR SE CONVIERTE EN DRAWER DESPLEGABLE */
   .sidebar {
-    width: 68px; /* Sidebar estrecha lateral para móvil */
-    padding: 16px 6px;
-    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 270px;
+    transform: translateX(-100%); /* Oculta a la izquierda por defecto */
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   }
 
-  .brand-title {
-    font-size: 0; /* Oculta texto, deja el emoji */
-    margin-bottom: 16px;
-  }
-  .brand-title::before {
-    content: "👨‍🍳";
-    font-size: 22px;
-  }
-
-  #btnQuickAdd {
-    font-size: 0;
-    padding: 10px;
-    border-radius: 50%;
-    margin-bottom: 16px;
-  }
-  #btnQuickAdd::before {
-    content: "+";
-    font-size: 20px;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: 12px 0;
-    font-size: 0; /* Oculta texto de los botones para ahorrar espacio */
-  }
-
-  .nav-item span {
-    font-size: 20px;
-  }
-
-  .user-profile-sidebar #userEmailNav {
-    display: none; /* Oculta email largo en móvil */
-  }
-
-  .user-profile-sidebar .nav-item {
-    font-size: 0;
-    justify-content: center;
+  .sidebar.open {
+    transform: translateX(0); /* Desliza desde la izquierda al abrir */
   }
 
   .main-content {
-    padding: 16px 12px;
+    padding: 68px 14px 24px 14px; /* Espacio superior para el botón de menú */
   }
 
   .meal-card {
     padding: 12px;
-    gap: 10px;
+    gap: 12px;
   }
 
   .meal-img-wrapper {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
+  }
+
+  .day-pill {
+    width: 54px;
+    padding: 10px 0;
   }
 }
 
