@@ -162,8 +162,8 @@
 
   <script>
     // ⚠️ SUSTITUIR CON TUS CREDENCIALES DE SUPABASE
-    const SUPABASE_URL = 'https://TU_PROJECT_ID.supabase.co';
-    const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
+    const SUPABASE_URL = 'https://vltqfttkklrrrbomsrrr.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_S-sUzf6RuPQcHYziCKiftg_9JRsEcBw';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let usuarioActual = null;
@@ -229,29 +229,75 @@
     }
 
     // Lógica para Plan Semanal
-    async function cargarPlanDia() {
-      const dia = document.getElementById('selectDiaPlan').value;
-      const list = document.getElementById('listaPlanContenido');
-      list.innerHTML = 'Cargando...';
+  async function cargarPlanDia() {
+    const dia = document.getElementById('selectDiaPlan').value;
+    const list = document.getElementById('listaPlanContenido');
+    list.innerHTML = 'Cargando...';
 
-      const { data, error } = await supabase
-        .from('plan_semanal')
-        .select('*, recetas(nombre)')
-        .eq('dia_semana', dia);
+    // 1. Obtener las recetas del usuario para el desplegable
+    const { data: misRecetas } = await supabase.from('recetas').select('id, nombre');
 
-      if (error || !data || data.length === 0) {
-        list.innerHTML = '<p style="color:#8e8e93;">No hay comidas programadas para este día.</p>';
-        return;
+    // 2. Obtener el plan del día seleccionado
+    const { data: planData, error } = await supabase
+      .from('plan_semanal')
+      .select('*, recetas(nombre)')
+      .eq('dia_semana', dia);
+
+    const tiposComida = ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'];
+    list.innerHTML = '';
+
+    tiposComida.forEach(tipo => {
+      const asignado = planData ? planData.find(p => p.comida_tipo === tipo) : null;
+      
+      // Opciones del desplegable de recetas
+      let opcionesRecetas = `<option value="">-- Seleccionar Receta --</option>`;
+      if (misRecetas) {
+        misRecetas.forEach(r => {
+          const selected = asignado && asignado.receta_id === r.id ? 'selected' : '';
+          opcionesRecetas += `<option value="${r.id}" ${selected}>${r.nombre}</option>`;
+        });
       }
 
-      list.innerHTML = data.map(item => `
-        <div class="checklist-item">
-          <div>
-            <strong>${item.comida_tipo}:</strong> ${item.recetas ? item.recetas.nombre : 'Plato personalizado'}
-          </div>
+      list.innerHTML += `
+        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+          <strong>${tipo}:</strong>
+          <select onchange="asignarRecetaAPlan('${dia}', '${tipo}', this.value)" style="margin-top: 4px;">
+            ${opcionesRecetas}
+          </select>
         </div>
-      `).join('');
+      `;
+    });
+  }
+
+  async function asignarRecetaAPlan(dia, comida_tipo, receta_id) {
+    if (!receta_id) return;
+
+    // Comprobar si ya existe un registro para este día y tipo de comida
+    const { data: existente } = await supabase
+      .from('plan_semanal')
+      .select('id')
+      .eq('dia_semana', dia)
+      .eq('comida_tipo', comida_tipo)
+      .maybeSingle();
+
+    if (existente) {
+      // Actualizar
+      await supabase
+        .from('plan_semanal')
+        .update({ receta_id })
+        .eq('id', existente.id);
+    } else {
+      // Insertar nuevo
+      await supabase
+        .from('plan_semanal')
+        .insert([{
+          user_id: usuarioActual.id,
+          dia_semana: dia,
+          comida_tipo: comida_tipo,
+          receta_id: receta_id
+        }]);
     }
+  }
 
     // Lógica para Recetas
     async function cargarRecetas() {
