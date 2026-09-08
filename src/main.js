@@ -6,7 +6,8 @@ import { renderRecetasView } from './pages/recetas.js';
 import { renderCompraView } from './pages/compra.js';
 
 let usuarioActual = null;
-let tabActual = 'Plan';
+// CAMBIO AQUÍ: Establecemos 'Recetas' como la vista por defecto al iniciar sesión
+let tabActual = 'Recetas';
 
 const app = document.getElementById('app');
 
@@ -46,8 +47,9 @@ function renderAppLayout() {
           <button class="btn-primary-add" id="btnQuickAdd" style="width:100%; margin-bottom: 16px;">+ Crear Receta</button>
           
           <nav class="sidebar-menu">
-            <button class="nav-item active" data-tab="Plan"><span>📅</span> Plan Semanal</button>
-            <button class="nav-item" data-tab="Recetas"><span>📖</span> Recetas</button>
+            <!-- Marcamos 'Recetas' como activa en el HTML inicial -->
+            <button class="nav-item active" data-tab="Recetas"><span>📖</span> Recetas</button>
+            <button class="nav-item" data-tab="Plan"><span>📅</span> Plan Semanal</button>
             <button class="nav-item" data-tab="Compra"><span>🛒</span> Lista Compra</button>
           </nav>
         </div>
@@ -73,7 +75,6 @@ function renderAppLayout() {
 
   document.getElementById('userEmailNav').innerText = usuarioActual.email;
 
-  // LÓGICA DE APERTURA Y CIERRE DEL MENÚ EN MÓVIL
   const sidebar = document.getElementById('mainSidebar');
   const overlay = document.getElementById('sidebarOverlay');
   const btnToggle = document.getElementById('btnMobileToggle');

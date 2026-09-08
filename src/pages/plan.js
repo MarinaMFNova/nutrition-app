@@ -215,7 +215,8 @@ export function renderPlanView(usuarioActual) {
     const { data: planData } = await supabase
       .from('plan_semanal')
       .select('*')
-      .or(`dia_semana.eq.${diaSeleccionadoObj.iso},dia_semana.eq.${diaSeleccionadoObj.nombreLargo.split(',')[0]}`);
+      .eq('user_id', usuarioActual.id)
+      .eq('dia_semana', diaSeleccionadoObj.iso);
 
     const tiposComida = [
       { id: 'Desayuno', label: 'Desayuno' },
@@ -231,13 +232,13 @@ export function renderPlanView(usuarioActual) {
       const recetaAsignada = asignacion && misRecetas ? misRecetas.find(r => r.id === asignacion.receta_id) : null;
       
       const textoPersonalizado = asignacion && asignacion.nota_personalizada ? asignacion.nota_personalizada : '';
-      const esCustom = asignacion && !asignacion.receta_id && textoPersonalizado;
+      const esOtro = asignacion && !asignacion.receta_id && textoPersonalizado;
 
       const imgUrl = obtenerImagenUrl(recetaAsignada);
       
       let opciones = `
-        <option value="">+ Añadir comida...</option>
-        <option value="__CUSTOM__" ${esCustom ? 'selected' : ''}>✏️ Escribir comida personalizada...</option>
+        <option value="">+ Añadir receta...</option>
+        <option value="__CUSTOM__" ${esOtro ? 'selected' : ''}> Otro</option>
       `;
 
       if (misRecetas && misRecetas.length > 0) {
@@ -256,7 +257,7 @@ export function renderPlanView(usuarioActual) {
         <div class="meal-img-wrapper">
           ${imgUrl 
             ? `<img src="${imgUrl}" alt="${recetaAsignada ? recetaAsignada.nombre : tipo.label}" />`
-            : (esCustom ? `<span style="font-size: 32px;">🍏</span>` : chefHatSVG)
+            : (esOtro ? `<span style="font-size: 30px;">☕</span>` : chefHatSVG)
           }
         </div>
         
@@ -267,15 +268,16 @@ export function renderPlanView(usuarioActual) {
             ${opciones}
           </select>
 
-          <div class="custom-input-wrapper ${esCustom ? '' : 'hidden'}" style="margin-top: 8px;">
-            <input type="text" placeholder="Ej: Fruta variada, Yogur..." value="${textoPersonalizado}">
-            <button class="btn-icon-save">Guardar</button>
+          <!-- BOX DE TEXTO LIBRE AL ELEGIR "OTRO" -->
+          <div class="custom-input-wrapper ${esOtro ? '' : 'hidden'}" style="margin-top: 8px;">
+            <input type="text" placeholder="Escribe tu comida (ej: Café con almendras)..." value="${textoPersonalizado}">
+            <button type="button" class="btn-icon-save">Guardar</button>
           </div>
 
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
             ${recetaAsignada 
               ? `⏱️ ${recetaAsignada.tiempo_preparacion || 15} min` 
-              : (esCustom ? `✏️ ${textoPersonalizado}` : 'Sin programar')
+              : (esOtro ? `☕ ${textoPersonalizado}` : 'Sin programar')
             }
           </div>
         </div>
@@ -296,16 +298,23 @@ export function renderPlanView(usuarioActual) {
           customWrapper.classList.add('hidden');
           
           if (!val) {
-            if (asignacion) await supabase.from('plan_semanal').delete().eq('id', asignacion.id);
+            if (asignacion) {
+              await supabase.from('plan_semanal').delete().eq('id', asignacion.id);
+            }
           } else {
             if (asignacion) {
-              await supabase.from('plan_semanal').update({ receta_id: val, nota_personalizada: null, dia_semana: diaSeleccionadoObj.iso }).eq('id', asignacion.id);
+              await supabase.from('plan_semanal').update({
+                receta_id: val,
+                nota_personalizada: null,
+                dia_semana: diaSeleccionadoObj.iso
+              }).eq('id', asignacion.id);
             } else {
               await supabase.from('plan_semanal').insert([{
                 user_id: usuarioActual.id,
                 dia_semana: diaSeleccionadoObj.iso,
                 comida_tipo: tipo.id,
-                receta_id: val
+                receta_id: val,
+                nota_personalizada: null
               }]);
             }
           }
@@ -318,7 +327,11 @@ export function renderPlanView(usuarioActual) {
         if (!txt) return;
 
         if (asignacion) {
-          await supabase.from('plan_semanal').update({ receta_id: null, nota_personalizada: txt, dia_semana: diaSeleccionadoObj.iso }).eq('id', asignacion.id);
+          await supabase.from('plan_semanal').update({
+            receta_id: null,
+            nota_personalizada: txt,
+            dia_semana: diaSeleccionadoObj.iso
+          }).eq('id', asignacion.id);
         } else {
           await supabase.from('plan_semanal').insert([{
             user_id: usuarioActual.id,
