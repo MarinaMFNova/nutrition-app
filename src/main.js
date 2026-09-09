@@ -6,7 +6,6 @@ import { renderRecetasView } from './pages/recetas.js';
 import { renderCompraView } from './pages/compra.js';
 
 let usuarioActual = null;
-// CAMBIO AQUÍ: Establecemos 'Recetas' como la vista por defecto al iniciar sesión
 let tabActual = 'Recetas';
 
 const app = document.getElementById('app');
@@ -33,11 +32,9 @@ function renderAppLayout() {
       </svg>
     </button>
 
-    <!-- CAPA OSCURA DE FONDO AL ABRIR MENÚ -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
     <div class="layout-container">
-      <!-- SIDEBAR LATERAL DESPLEGABLE -->
       <aside class="sidebar" id="mainSidebar">
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -47,7 +44,6 @@ function renderAppLayout() {
           <button class="btn-primary-add" id="btnQuickAdd" style="width:100%; margin-bottom: 16px;">+ Crear Receta</button>
           
           <nav class="sidebar-menu">
-            <!-- Marcamos 'Recetas' como activa en el HTML inicial -->
             <button class="nav-item active" data-tab="Recetas"><span>📖</span> Recetas</button>
             <button class="nav-item" data-tab="Plan"><span>📅</span> Plan Semanal</button>
             <button class="nav-item" data-tab="Compra"><span>🛒</span> Lista Compra</button>
@@ -68,7 +64,6 @@ function renderAppLayout() {
         </div>
       </aside>
 
-      <!-- CONTENIDO PRINCIPAL -->
       <main class="main-content" id="contentView"></main>
     </div>
   `;
@@ -131,6 +126,9 @@ function cargarVistaPestana(abrirFormulario = false) {
   } else if (tabActual === 'Compra') {
     content.appendChild(renderCompraView(usuarioActual));
   }
+
+  // FORZAR POSICIONAR LA PANTALLA ARRIBA AL CAMBIAR
+  window.scrollTo(0, 0);
 }
 
 init();

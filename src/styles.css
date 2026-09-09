@@ -40,14 +40,14 @@
 
 html, body {
   width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
+  max-width: 100vw;
+  overflow-x: hidden !important;
   margin: 0;
   padding: 0;
 }
 
 * { 
-  box-sizing: border-box; 
+  box-sizing: border-box !important; 
   -webkit-tap-highlight-color: transparent; 
 }
 
@@ -58,7 +58,6 @@ body {
   min-height: 100vh;
 }
 
-/* CENTRADO AUTENTICACIÓN */
 .auth-wrapper {
   min-height: 100vh;
   width: 100%;
@@ -82,7 +81,7 @@ body {
 .card {
   background-color: var(--card-bg);
   border-radius: 20px;
-  padding: 20px;
+  padding: 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   width: 100%;
@@ -99,7 +98,6 @@ input, select, textarea {
   color: var(--text-main);
   font-size: 16px;
   outline: none;
-  box-sizing: border-box;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -160,12 +158,12 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
-/* CONTENEDORES Y ESTRUCTURA */
 .layout-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -234,32 +232,30 @@ button:hover { background-color: var(--primary-hover); }
 
 .main-content {
   flex: 1;
-  padding: 32px;
+  padding: 28px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  box-sizing: border-box;
 }
 
+/* CENTRADO VERTICAL DEL CALENDARIO EN ESCRITORIO */
 .plan-grid-wrapper {
   display: grid;
   grid-template-columns: 1fr 280px;
-  gap: 28px;
-  align-items: start;
+  gap: 24px;
+  align-items: center; /* Centra el calendario verticalmente */
   width: 100%;
 }
 
-/* CARROUSEL DE DÍAS */
 .days-selector-container {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
   scrollbar-width: none;
   width: 100%;
   max-width: 100%;
-  padding-right: 16px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -267,9 +263,9 @@ button:hover { background-color: var(--primary-hover); }
 
 .day-pill {
   flex: 0 0 auto;
-  width: 54px;
-  padding: 10px 0;
-  border-radius: 14px;
+  width: 50px;
+  padding: 8px 0;
+  border-radius: 12px;
   background-color: var(--card-bg);
   border: 1px solid var(--border);
   text-align: center;
@@ -278,14 +274,14 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 .day-pill .day-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .day-pill .day-number {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   margin-top: 2px;
   color: var(--text-main);
@@ -299,26 +295,24 @@ button:hover { background-color: var(--primary-hover); }
 .day-pill.active .day-name,
 .day-pill.active .day-number { color: var(--primary); }
 
-/* TARJETAS DE PLAN SEMANAL (FIX AJUSTE PERFECTO DEL DESPLEGABLE) */
 .meal-card {
   background-color: var(--card-bg);
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box;
   overflow: hidden;
 }
 
 .meal-img-wrapper {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   overflow: hidden;
   background-color: var(--input-bg);
@@ -339,51 +333,46 @@ button:hover { background-color: var(--primary-hover); }
   flex: 1;
   min-width: 0;
   width: 100%;
-  box-sizing: border-box;
 }
 
 .meal-badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   background-color: #fef3c7;
   color: #b45309;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .select-mode-wrapper {
   width: 100%;
-  box-sizing: border-box;
 }
 
 .meal-select-custom {
   width: 100%;
-  margin-top: 4px;
-  padding: 8px 10px;
+  margin-top: 2px;
+  padding: 8px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   background-color: var(--input-bg);
   color: var(--text-main);
-  box-sizing: border-box;
-  max-width: 100%;
-  text-overflow: ellipsis;
 }
 
 .mobile-toggle-btn {
   display: none;
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 10px;
+  left: 10px;
   z-index: 1000;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background-color: var(--card-bg);
   color: var(--text-main);
   border: 1px solid var(--border);
@@ -415,11 +404,10 @@ button:hover { background-color: var(--primary-hover); }
 
 .sidebar-overlay.visible { display: block; }
 
-/* ADAPTABILIDAD RESPONSIVE MÓVIL */
 @media (max-width: 900px) {
   .plan-grid-wrapper {
     grid-template-columns: 1fr !important;
-    gap: 20px !important;
+    gap: 16px !important;
   }
 }
 
@@ -434,7 +422,7 @@ button:hover { background-color: var(--primary-hover); }
     bottom: 0;
     height: 100vh;
     height: 100dvh;
-    width: 270px;
+    width: 260px;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
     overflow-y: auto;
@@ -443,29 +431,25 @@ button:hover { background-color: var(--primary-hover); }
   .sidebar.open { transform: translateX(0); }
 
   .main-content { 
-    padding: 64px 10px 24px 10px !important;
+    padding: 58px 12px 24px 12px !important;
     width: 100% !important;
-    overflow-x: hidden;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
   }
 
   .meal-card {
-    padding: 10px 12px;
+    padding: 10px;
     gap: 10px;
   }
 
   .meal-img-wrapper {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
   }
 
   .day-pill {
-    width: 48px;
-    padding: 8px 0;
-  }
-
-  .meal-select-custom {
-    font-size: 13px;
-    padding: 8px 6px;
+    width: 46px;
+    padding: 6px 0;
   }
 }
 
