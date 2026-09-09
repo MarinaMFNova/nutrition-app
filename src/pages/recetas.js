@@ -4,7 +4,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const container = document.createElement('div');
   container.className = 'recetas-page-container';
 
-  // SVG Lupa limpia
   const searchSVG = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="11" cy="11" r="8"></circle>
@@ -14,9 +13,9 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   let recetas = [];
   let busqueda = '';
+  let imagenBase64 = null; // Guardará la imagen subida desde el PC
 
   container.innerHTML = `
-    <!-- CABECERA LIMPIA: TÍTULO A LA IZQUIERDA, BOTÓN A LA DERECHA -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
       <div>
         <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: var(--text-main);">Mis Recetas</h1>
@@ -28,7 +27,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       </button>
     </div>
 
-    <!-- BUSCADOR CON LUPA INCRUSTADA DENTRO -->
     <div style="position: relative; width: 100%; margin-bottom: 24px;">
       <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none;">
         ${searchSVG}
@@ -56,15 +54,27 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Tiempo (min)</label>
             <input type="number" id="recetaTiempo" placeholder="25" min="1" />
           </div>
+          
+          <!-- SELECCIÓN DE IMAGEN (SUBIR ARCHIVO O URL) -->
           <div>
-            <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">URL de la Imagen (opcional)</label>
-            <input type="url" id="recetaImagen" placeholder="https://..." />
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Imagen (Archivo local)</label>
+            <input type="file" id="recetaFile" accept="image/*" style="padding: 8px; font-size: 12px;" />
           </div>
         </div>
 
         <div>
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Ingredientes (uno por línea)</label>
-          <textarea id="recetaIngredientes" rows="3" placeholder="2 pechugas de pollo&#10;1 vaso de arroz&#10;1 cda de curry"></textarea>
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">O pegar enlace URL de imagen (Opcional)</label>
+          <input type="url" id="recetaImagenUrl" placeholder="https://..." />
+        </div>
+
+        <!-- VISTA PREVIA DE LA FOTO SELECCIONADA -->
+        <div id="previewContainer" class="hidden" style="text-align: center; margin-top: 4px;">
+          <img id="imgPreview" src="" alt="Vista previa" style="max-height: 120px; border-radius: 12px; border: 1px solid var(--border);" />
+        </div>
+
+        <div>
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Ingredientes</label>
+          <textarea id="recetaIngredientes" rows="3" placeholder="2 pechugas de pollo&#10;1 vaso de arroz"></textarea>
         </div>
 
         <div>
@@ -72,14 +82,15 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
           <textarea id="recetaPasos" rows="3" placeholder="1. Cortar el pollo...&#10;2. Cocinar a fuego lento..."></textarea>
         </div>
 
+        <p id="formErrorMsg" style="color: var(--danger); font-size: 13px; font-weight: 600; margin: 0; display: none;"></p>
+
         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px;">
           <button type="button" id="btnCancelarForm" class="btn-outline" style="width: auto; margin:0; padding: 10px 18px;">Cancelar</button>
-          <button type="submit" style="width: auto; margin:0; padding: 10px 22px;">Guardar Receta</button>
+          <button type="submit" id="btnSubmitReceta" style="width: auto; margin:0; padding: 10px 22px;">Guardar Receta</button>
         </div>
       </form>
     </div>
 
-    <!-- LISTADO DE TARJETAS DE RECETA -->
     <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;"></div>
   `;
 
@@ -87,19 +98,57 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const btnNueva = container.querySelector('#btnNuevaReceta');
   const btnCancelar = container.querySelector('#btnCancelarForm');
   const formReceta = container.querySelector('#formReceta');
+  const btnSubmit = container.querySelector('#btnSubmitReceta');
+  const formErrorMsg = container.querySelector('#formErrorMsg');
   const inputBuscar = container.querySelector('#inputBuscar');
   const grid = container.querySelector('#gridRecetas');
+
+  const inputFile = container.querySelector('#recetaFile');
+  const inputUrl = container.querySelector('#recetaImagenUrl');
+  const previewContainer = container.querySelector('#previewContainer');
+  const imgPreview = container.querySelector('#imgPreview');
 
   if (abrirFormularioInicial) {
     modalForm.classList.remove('hidden');
   }
 
+  // LÓGICA DE LECTURA DE IMAGEN DESDE DISCO LOCAL / MÓVIL
+  inputFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        imagenBase64 = event.target.result;
+        imgPreview.src = imagenBase64;
+        previewContainer.classList.remove('hidden');
+        inputUrl.value = ''; // Limpiar el campo URL si se sube archivo
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  inputUrl.addEventListener('input', (e) => {
+    if (e.target.value.trim()) {
+      imagenBase64 = null;
+      inputFile.value = '';
+      imgPreview.src = e.target.value.trim();
+      previewContainer.classList.remove('hidden');
+    } else {
+      previewContainer.classList.add('hidden');
+    }
+  });
+
   btnNueva.addEventListener('click', () => {
     modalForm.classList.toggle('hidden');
+    formErrorMsg.style.display = 'none';
   });
 
   btnCancelar.addEventListener('click', () => {
     modalForm.classList.add('hidden');
+    formErrorMsg.style.display = 'none';
+    formReceta.reset();
+    imagenBase64 = null;
+    previewContainer.classList.add('hidden');
   });
 
   inputBuscar.addEventListener('input', (e) => {
@@ -175,26 +224,44 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   formReceta.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const nombre = container.querySelector('#recetaNombre').value.trim();
-    const tiempo = parseInt(container.querySelector('#recetaTiempo').value) || 15;
-    const imagen_url = container.querySelector('#recetaImagen').value.trim();
-    const ingredientes = container.querySelector('#recetaIngredientes').value.trim();
-    const pasos = container.querySelector('#recetaPasos').value.trim();
+    formErrorMsg.style.display = 'none';
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = 'Guardando...';
 
-    const { error } = await supabase.from('recetas').insert([{
-      user_id: usuarioActual.id,
-      nombre,
-      tiempo_preparacion: tiempo,
-      imagen_url: imagen_url || null,
-      ingredientes,
-      pasos
-    }]);
+    try {
+      const nombre = container.querySelector('#recetaNombre').value.trim();
+      const tiempo = parseInt(container.querySelector('#recetaTiempo').value) || 15;
+      const urlEscrita = inputUrl.value.trim();
+      
+      // Determinar qué imagen guardar: la imagen subida localmente o la URL escrita
+      const finalImagenUrl = imagenBase64 || urlEscrita || null;
 
-    if (!error) {
+      const ingredientes = container.querySelector('#recetaIngredientes').value.trim();
+      const pasos = container.querySelector('#recetaPasos').value.trim();
+
+      const { error } = await supabase.from('recetas').insert([{
+        user_id: usuarioActual.id,
+        nombre,
+        tiempo_preparacion: tiempo,
+        imagen_url: finalImagenUrl,
+        ingredientes,
+        pasos
+      }]);
+
+      if (error) throw error;
+
       formReceta.reset();
+      imagenBase64 = null;
+      previewContainer.classList.add('hidden');
       modalForm.classList.add('hidden');
       cargarRecetas();
+    } catch (err) {
+      console.error("Error al guardar receta:", err);
+      formErrorMsg.innerText = "Error al guardar: " + (err.message || "comprueba la imagen.");
+      formErrorMsg.style.display = 'block';
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = 'Guardar Receta';
     }
   });
 

@@ -10,7 +10,6 @@ export function renderPlanView(usuarioActual) {
     </svg>
   `;
 
-  // ICONOS VECTORIALES PLANOS (SIN REBORDE NI ESTILO EMOJI DE SISTEMA)
   const checkSVG = `
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="20 6 9 17 4 12"></polyline>
@@ -109,6 +108,17 @@ export function renderPlanView(usuarioActual) {
         <div id="miniCalGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;"></div>
       </div>
     </div>
+
+    <!-- MODAL SELECCIÓN DE RECETA -->
+    <div id="modalSelectReceta" class="sidebar-overlay">
+      <div class="card" style="max-width: 450px; width: 90%; margin: 80px auto 0 auto; max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 18px; color: var(--primary);">Elegir Receta</h3>
+          <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
+        </div>
+        <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+    </div>
   `;
 
   let miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
@@ -205,10 +215,6 @@ export function renderPlanView(usuarioActual) {
     if (!receta) return null;
     if (receta.imagen_url) return receta.imagen_url;
     if (receta.imagen) return receta.imagen;
-    if (receta.pasos && receta.pasos.includes('[Imagen: ')) {
-      const match = receta.pasos.match(/\[Imagen:\s*([^\]]+)\]/);
-      if (match && match[1]) return match[1];
-    }
     return null;
   }
 
@@ -216,7 +222,7 @@ export function renderPlanView(usuarioActual) {
     const list = container.querySelector('#listaComidasPlan');
     list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Cargando menú...</p>';
 
-    const { data: misRecetas } = await supabase.from('recetas').select('*');
+    const { data: misRecetas } = await supabase.from('recetas').select('*').eq('user_id', usuarioActual.id);
     
     const { data: planData } = await supabase
       .from('plan_semanal')
@@ -239,23 +245,10 @@ export function renderPlanView(usuarioActual) {
       
       const textoPersonalizado = asignacion && asignacion.nota_personalizada ? asignacion.nota_personalizada : '';
       const esOtroGuardado = asignacion && !asignacion.receta_id && textoPersonalizado;
+      const tieneAsignacion = recetaAsignada || esOtroGuardado;
 
       const imgUrl = obtenerImagenUrl(recetaAsignada);
       
-      let opciones = `
-        <option value="">+ Añadir receta...</option>
-        <option value="__CUSTOM__">✏️ Otro (Café, fruta...)</option>
-      `;
-
-      if (misRecetas && misRecetas.length > 0) {
-        opciones += `<optgroup label="Mis Recetas">`;
-        misRecetas.forEach(r => {
-          const selected = recetaAsignada && recetaAsignada.id === r.id ? 'selected' : '';
-          opciones += `<option value="${r.id}" ${selected}>📖 ${r.nombre}</option>`;
-        });
-        opciones += `</optgroup>`;
-      }
-
       const card = document.createElement('div');
       card.className = 'meal-card';
 
@@ -263,97 +256,124 @@ export function renderPlanView(usuarioActual) {
         <div class="meal-img-wrapper">
           ${imgUrl 
             ? `<img src="${imgUrl}" alt="${recetaAsignada ? recetaAsignada.nombre : tipo.label}" />`
-            : (esOtroGuardado ? `<span style="font-size: 30px;">☕</span>` : chefHatSVG)
+            : (esOtroGuardado ? `<span style="font-size: 26px;">☕</span>` : chefHatSVG)
           }
         </div>
         
         <div class="meal-info" style="width: 100%;">
           <span class="meal-badge">${tipo.label}</span>
           
-          <div class="select-mode-wrapper ${esOtroGuardado ? 'hidden' : ''}">
-            <select class="meal-select-custom">
-              ${opciones}
-            </select>
-
-            <!-- BOTONES PLANOS SVG SIN REBORDE DE FONDO -->
-            <div class="custom-input-wrapper hidden" style="margin-top: 8px; display: flex; align-items: center; gap: 4px;">
-              <input type="text" placeholder="Ej: Café con fruta..." value="${textoPersonalizado}" style="flex: 1; margin: 0;">
-              
-              <button type="button" class="btn-confirm-custom" style="width: 36px; height: 36px; padding: 0; margin: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Guardar">
-                ${checkSVG}
-              </button>
-              
-              <button type="button" class="btn-cancel-custom" style="width: 36px; height: 36px; padding: 0; margin: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Cancelar">
-                ${crossSVG}
-              </button>
-            </div>
+          <!-- ESTADO 1: SIN NADA ASIGNADO -> MUESTRA 2 BOTONES DE ACCIÓN DIRECTA -->
+          <div class="actions-unassigned ${tieneAsignacion ? 'hidden' : ''}" style="display: flex; gap: 8px; margin-top: 6px;">
+            <button type="button" class="btn-open-recetas btn-outline" style="flex: 1; padding: 8px 10px; margin: 0; font-size: 13px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              📖 Receta
+            </button>
+            <button type="button" class="btn-open-custom btn-outline" style="flex: 1; padding: 8px 10px; margin: 0; font-size: 13px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              ✏️ Rápido
+            </button>
           </div>
 
-          <div class="saved-custom-display ${esOtroGuardado ? '' : 'hidden'}" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 8px 12px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
-            <span style="font-size: 15px; font-weight: 600; color: var(--text-main);" class="custom-text-val">${textoPersonalizado}</span>
+          <!-- ESTADO 2: MODO EDICIÓN RÁPIDA (TEXTO LIBRE) -->
+          <div class="custom-input-wrapper hidden" style="margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <input type="text" placeholder="Ej: Café con fruta..." value="${textoPersonalizado}" style="flex: 1; margin: 0; font-size: 14px; padding: 8px 10px;">
             
-            <div style="display: flex; gap: 6px;">
-              <button type="button" class="btn-edit-custom btn-outline" style="width: 32px; height: 32px; padding: 0; margin: 0; border-radius: 8px;" title="Editar">✏️</button>
-              <button type="button" class="btn-delete-custom btn-outline" style="width: 32px; height: 32px; padding: 0; margin: 0; border-radius: 8px; color: var(--danger);" title="Eliminar">🗑️</button>
-            </div>
+            <button type="button" class="btn-confirm-custom" style="width: 34px; height: 34px; padding: 0; margin: 0; background: transparent; border: none; cursor: pointer;">
+              ${checkSVG}
+            </button>
+            
+            <button type="button" class="btn-cancel-custom" style="width: 34px; height: 34px; padding: 0; margin: 0; background: transparent; border: none; cursor: pointer;">
+              ${crossSVG}
+            </button>
           </div>
 
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+          <!-- ESTADO 3: YA ASIGNADO (MOSTRAR RECETA O TEXTO GUARDADO) -->
+          <div class="saved-display ${tieneAsignacion ? '' : 'hidden'}" style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding: 6px 10px; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border);">
+            <span style="font-size: 14px; font-weight: 700; color: var(--text-main); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+              ${recetaAsignada ? recetaAsignada.nombre : textoPersonalizado}
+            </span>
+            
+            <button type="button" class="btn-delete-item btn-outline" style="width: 28px; height: 28px; padding: 0; margin: 0; border-radius: 6px; color: var(--danger); flex-shrink: 0;" title="Quitar">🗑️</button>
+          </div>
+
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
             ${recetaAsignada 
               ? `⏱️ ${recetaAsignada.tiempo_preparacion || 15} min` 
-              : (esOtroGuardado ? `☕ Personalizado` : 'Sin programar')
+              : (esOtroGuardado ? `☕ Entrada rápida` : 'Sin asignar')
             }
           </div>
         </div>
       `;
 
-      const selectModeWrapper = card.querySelector('.select-mode-wrapper');
-      const savedCustomDisplay = card.querySelector('.saved-custom-display');
-      
-      const select = card.querySelector('select');
+      const actionsUnassigned = card.querySelector('.actions-unassigned');
       const customInputWrapper = card.querySelector('.custom-input-wrapper');
-      const inputCustom = card.querySelector('.custom-input-wrapper input');
+      const savedDisplay = card.querySelector('.saved-display');
       
+      const btnOpenRecetas = card.querySelector('.btn-open-recetas');
+      const btnOpenCustom = card.querySelector('.btn-open-custom');
+      
+      const inputCustom = card.querySelector('.custom-input-wrapper input');
       const btnConfirmCustom = card.querySelector('.btn-confirm-custom');
       const btnCancelCustom = card.querySelector('.btn-cancel-custom');
       
-      const btnEditCustom = card.querySelector('.btn-edit-custom');
-      const btnDeleteCustom = card.querySelector('.btn-delete-custom');
+      const btnDeleteItem = card.querySelector('.btn-delete-item');
 
-      select.addEventListener('change', async (e) => {
-        const val = e.target.value;
+      // ACCIÓN: ABRIR MODAL RECETAS
+      btnOpenRecetas.addEventListener('click', () => {
+        const modal = container.querySelector('#modalSelectReceta');
+        const listado = container.querySelector('#listadoModalRecetas');
 
-        if (val === '__CUSTOM__') {
-          customInputWrapper.classList.remove('hidden');
-          inputCustom.focus();
+        listado.innerHTML = '';
+
+        if (!misRecetas || misRecetas.length === 0) {
+          listado.innerHTML = `<p style="text-align:center; color: var(--text-muted); font-size:14px; padding: 20px 0;">No tienes recetas aún.</p>`;
         } else {
-          customInputWrapper.classList.add('hidden');
-          
-          if (!val) {
-            if (asignacion) {
-              await supabase.from('plan_semanal').delete().eq('id', asignacion.id);
-            }
-          } else {
-            if (asignacion) {
-              await supabase.from('plan_semanal').update({
-                receta_id: val,
-                nota_personalizada: null,
-                dia_semana: diaSeleccionadoObj.iso
-              }).eq('id', asignacion.id);
-            } else {
-              await supabase.from('plan_semanal').insert([{
-                user_id: usuarioActual.id,
-                dia_semana: diaSeleccionadoObj.iso,
-                comida_tipo: tipo.id,
-                receta_id: val,
-                nota_personalizada: null
-              }]);
-            }
-          }
-          cargarMenuDia();
+          misRecetas.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'card';
+            item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s;';
+            item.innerHTML = `
+              <div>
+                <div style="font-weight: 700; font-size: 14px;">${r.nombre}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">⏱️ ${r.tiempo_preparacion || 15} min</div>
+              </div>
+              <span style="color: var(--primary); font-size: 18px;">+</span>
+            `;
+
+            item.addEventListener('click', async () => {
+              if (asignacion) {
+                await supabase.from('plan_semanal').update({
+                  receta_id: r.id,
+                  nota_personalizada: null,
+                  dia_semana: diaSeleccionadoObj.iso
+                }).eq('id', asignacion.id);
+              } else {
+                await supabase.from('plan_semanal').insert([{
+                  user_id: usuarioActual.id,
+                  dia_semana: diaSeleccionadoObj.iso,
+                  comida_tipo: tipo.id,
+                  receta_id: r.id,
+                  nota_personalizada: null
+                }]);
+              }
+              modal.classList.remove('visible');
+              cargarMenuDia();
+            });
+
+            listado.appendChild(item);
+          });
         }
+
+        modal.classList.add('visible');
       });
 
+      // ACCIÓN: ABRIR TEXTO RÁPIDO
+      btnOpenCustom.addEventListener('click', () => {
+        actionsUnassigned.classList.add('hidden');
+        customInputWrapper.classList.remove('hidden');
+        inputCustom.focus();
+      });
+
+      // CONFIRMAR TEXTO RÁPIDO
       btnConfirmCustom.addEventListener('click', async () => {
         const txt = inputCustom.value.trim();
         if (!txt) return;
@@ -376,19 +396,14 @@ export function renderPlanView(usuarioActual) {
         cargarMenuDia();
       });
 
+      // CANCELAR TEXTO RÁPIDO
       btnCancelCustom.addEventListener('click', () => {
-        cargarMenuDia();
+        customInputWrapper.classList.add('hidden');
+        actionsUnassigned.classList.remove('hidden');
       });
 
-      btnEditCustom.addEventListener('click', () => {
-        savedCustomDisplay.classList.add('hidden');
-        selectModeWrapper.classList.remove('hidden');
-        customInputWrapper.classList.remove('hidden');
-        select.value = '__CUSTOM__';
-        inputCustom.focus();
-      });
-
-      btnDeleteCustom.addEventListener('click', async () => {
+      // QUITAR/BORRAR ALIMENTO ASIGNADO
+      btnDeleteItem.addEventListener('click', async () => {
         if (asignacion) {
           await supabase.from('plan_semanal').delete().eq('id', asignacion.id);
         }
@@ -400,6 +415,10 @@ export function renderPlanView(usuarioActual) {
   }
 
   setTimeout(() => {
+    container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => {
+      container.querySelector('#modalSelectReceta').classList.remove('visible');
+    });
+
     container.querySelector('#btnMiniPrev').addEventListener('click', () => {
       miniCalFecha.setMonth(miniCalFecha.getMonth() - 1);
       renderMiniCal();
