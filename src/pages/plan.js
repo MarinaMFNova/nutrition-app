@@ -3,13 +3,6 @@ import { supabase } from '../supabase.js';
 export function renderPlanView(usuarioActual) {
   const container = document.createElement('div');
 
-  const chefHatSVG = `
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 13.8a4.5 4.5 0 1 1 2.61-7.06 5 5 0 0 1 6.78 0A4.5 4.5 0 1 1 18 13.8"></path>
-      <path d="M6 13.8h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3z"></path>
-    </svg>
-  `;
-
   const bookSVG = `
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -37,35 +30,8 @@ export function renderPlanView(usuarioActual) {
     </svg>
   `;
 
-  const mapaImagenesAutomaticas = {
-    'Café solo / con leche': 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200&q=80',
-    'Tostada con tomate y aceite': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=80',
-    'Tostada con aguacate y huevo': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=80',
-    'Porridge de avena con fruta': 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=200&q=80',
-    'Huevos revueltos con aguacate': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=80',
-    'Pechuga de pollo a la plancha con verduras': 'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=200&q=80',
-    'Salmón a la plancha con espárragos': 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=200&q=80',
-    'Pasta integral boloñesa': 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=200&q=80',
-    'Arroz integral con salteado de verduras y pavo': 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=200&q=80',
-    'Lentejas guisadas con verduras': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&q=80',
-    'Plátano con almendras': 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=200&q=80',
-    'Manzana con canela': 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=200&q=80',
-    'Yogur proteico con arándanos': 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&q=80',
-    'Batido de proteínas de vainilla': 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=200&q=80',
-    'Tortilla francesa con ensalada': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=80',
-    'Crema de calabacín y quesitos': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80',
-    'Ensalada mixta con atún y huevo cocido': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&q=80',
-    'Gazpacho fresco con virutas de jamón': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80'
-  };
-
-  const catalogoAlimentosInteligente = Object.keys(mapaImagenesAutomaticas).map(nombre => ({
-    nombre,
-    cat: nombre.includes('Café') || nombre.includes('Tostada') || nombre.includes('Porridge') || nombre.includes('Huevos') ? 'Desayunos' :
-         nombre.includes('Plátano') || nombre.includes('Manzana') || nombre.includes('Yogur') || nombre.includes('Batido') ? 'Snacks' :
-         nombre.includes('Tortilla') || nombre.includes('Crema') || nombre.includes('Gazpacho') || nombre.includes('Ensalada') ? 'Cenas' : 'Comidas',
-    tags: [nombre.toLowerCase()],
-    img: mapaImagenesAutomaticas[nombre]
-  }));
+  let cacheMisRecetas = null;
+  let cacheCatalogo = null;
 
   let fechaActual = new Date();
 
@@ -107,7 +73,7 @@ export function renderPlanView(usuarioActual) {
 
   let diasCalculados = generarDiasSemana(lunesSemana);
   let diaSeleccionadoObj = diasCalculados.find(d => d.esHoy) || diasCalculados[0];
-  let tipoComidaSeleccionado = 'Desayuno'; // Para saber a qué comida añadir el plato
+  let tipoComidaSeleccionado = 'Desayuno';
 
   container.innerHTML = `
     <div class="plan-grid-wrapper">
@@ -127,10 +93,10 @@ export function renderPlanView(usuarioActual) {
 
           <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
             <button id="btnAutoPlan" class="btn-primary" style="width: auto; margin:0; padding: 7px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: var(--primary-gradient); box-shadow: var(--shadow);">
-              ${sparklerSVG} Generar Menú Semanal
+              ${sparklerSVG} Generar Menú Diario
             </button>
-            <button id="btnLimpiarPlan" class="btn-outline" style="width: auto; margin:0; padding: 7px 12px; font-size: 13px; color: var(--danger);" title="Vaciar semana entera">
-              ${trashSVG} Limpiar
+            <button id="btnLimpiarPlan" class="btn-outline" style="width: auto; margin:0; padding: 7px 12px; font-size: 13px; color: var(--danger);" title="Vaciar día actual">
+              ${trashSVG} Limpiar Día
             </button>
             <button id="btnSemanaAnterior" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 13px;">◀</button>
             <button id="btnHoy" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 13px; font-weight: 600;">Hoy</button>
@@ -178,14 +144,7 @@ export function renderPlanView(usuarioActual) {
           <button id="btnCloseModalSearch" style="width: auto; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
         </div>
 
-        <input type="text" id="inputSearchAlimento" placeholder="Ej: 'pollo', 'proteina', 'cena ligera'..." style="margin-top: 0; margin-bottom: 10px; height: 44px;" />
-
-        <div id="smartChips" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: none;">
-          <button class="chip-item active" data-query="" style="width: auto; padding: 5px 12px; margin:0; font-size: 12px; border-radius: 20px;">Todos</button>
-          <button class="chip-item btn-outline" data-query="comida" style="width: auto; padding: 5px 12px; margin:0; font-size: 12px; border-radius: 20px;">🍲 Comidas</button>
-          <button class="chip-item btn-outline" data-query="proteina" style="width: auto; padding: 5px 12px; margin:0; font-size: 12px; border-radius: 20px;">💪 Alta Proteína</button>
-          <button class="chip-item btn-outline" data-query="cena" style="width: auto; padding: 5px 12px; margin:0; font-size: 12px; border-radius: 20px;">🥗 Cenas Ligeras</button>
-        </div>
+        <input type="text" id="inputSearchAlimento" placeholder="Empieza a escribir (ej: 'Açai', 'Pasta')..." style="margin-top: 0; margin-bottom: 10px; height: 44px;" />
 
         <div id="listadoSugerencias" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; flex: 1;"></div>
       </div>
@@ -319,19 +278,34 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
-  // RENDEREIZADO DE MULTI-ELEMENTOS POR COMIDA
   async function cargarMenuDia() {
     const list = container.querySelector('#listaComidasPlan');
-    list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Cargando menú...</p>';
 
-    const { data: misRecetas } = await supabase.from('recetas').select('*').eq('user_id', usuarioActual.id);
-    
-    // Cargar todos los registros para este día
-    const { data: planData } = await supabase
-      .from('plan_semanal')
-      .select('*')
-      .eq('user_id', usuarioActual.id)
-      .eq('dia_semana', diaSeleccionadoObj.iso);
+    const promesas = [
+      supabase.from('plan_semanal').select('*').eq('user_id', usuarioActual.id).eq('dia_semana', diaSeleccionadoObj.iso)
+    ];
+
+    if (!cacheMisRecetas) {
+      promesas.push(supabase.from('recetas').select('*').eq('user_id', usuarioActual.id));
+    }
+    if (!cacheCatalogo) {
+      promesas.push(supabase.from('catalogo_alimentos').select('*'));
+    }
+
+    const resultados = await Promise.all(promesas);
+    const planData = resultados[0].data || [];
+
+    let idxPromesa = 1;
+    if (!cacheMisRecetas) {
+      cacheMisRecetas = resultados[idxPromesa]?.data || [];
+      idxPromesa++;
+    }
+    if (!cacheCatalogo) {
+      cacheCatalogo = resultados[idxPromesa]?.data || [];
+    }
+
+    const misRecetas = cacheMisRecetas;
+    const catalogo = cacheCatalogo;
 
     const tiposComida = [
       { id: 'Desayuno', label: 'Desayuno' },
@@ -343,8 +317,7 @@ export function renderPlanView(usuarioActual) {
     list.innerHTML = '';
 
     tiposComida.forEach(tipo => {
-      // Filtrar TODOS los elementos asignados a esta comida
-      const asignaciones = planData ? planData.filter(p => p.comida_tipo === tipo.id) : [];
+      const asignaciones = planData.filter(p => p.comida_tipo === tipo.id);
 
       const card = document.createElement('div');
       card.className = 'card';
@@ -353,22 +326,22 @@ export function renderPlanView(usuarioActual) {
       let itemsHtml = '';
 
       if (asignaciones.length === 0) {
-        itemsHtml = `
-          <div style="font-size: 13px; color: var(--text-muted); margin: 8px 0;">Sin asignar</div>
-        `;
+        itemsHtml = `<div style="font-size: 13px; color: var(--text-muted); margin: 8px 0;">Sin asignar</div>`;
       } else {
         itemsHtml = asignaciones.map(asig => {
-          const recetaAsignada = asig.receta_id && misRecetas ? misRecetas.find(r => r.id === asig.receta_id) : null;
+          const recetaAsignada = asig.receta_id ? misRecetas.find(r => r.id === asig.receta_id) : null;
           const texto = recetaAsignada ? recetaAsignada.nombre : asig.nota_personalizada;
-
+          
           let imgUrl = recetaAsignada ? recetaAsignada.imagen_url : null;
+          
           if (!imgUrl && asig.nota_personalizada) {
-            imgUrl = mapaImagenesAutomaticas[asig.nota_personalizada] || null;
+            const matchCat = catalogo.find(c => c.nombre.toLowerCase().trim() === asig.nota_personalizada.toLowerCase().trim());
+            if (matchCat && matchCat.imagen_url) imgUrl = matchCat.imagen_url;
           }
 
           const imgBadgeHtml = imgUrl 
             ? `<img src="${imgUrl}" style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover;" />`
-            : `<div style="width: 38px; height: 38px; border-radius: 10px; background: var(--input-bg); display: flex; align-items: center; justify-content: center;">${chefHatSVG}</div>`;
+            : `<div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 20px;">👨‍🍳</div>`;
 
           return `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--input-bg); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border);">
@@ -404,7 +377,6 @@ export function renderPlanView(usuarioActual) {
         </div>
       `;
 
-      // BOTÓN AÑADIR RECETA
       card.querySelector('.btn-add-receta').addEventListener('click', () => {
         tipoComidaSeleccionado = tipo.id;
         const modal = container.querySelector('#modalSelectReceta');
@@ -446,85 +418,92 @@ export function renderPlanView(usuarioActual) {
         modal.classList.add('visible');
       });
 
-      // BOTÓN AÑADIR ALIMENTO RÁPIDO
       card.querySelector('.btn-add-alimento').addEventListener('click', () => {
         tipoComidaSeleccionado = tipo.id;
         const modal = container.querySelector('#modalSearchAlimento');
         const input = container.querySelector('#inputSearchAlimento');
         const listado = container.querySelector('#listadoSugerencias');
-        const chips = container.querySelectorAll('.chip-item');
 
         input.value = '';
 
-        function renderSugerenciasSemanticas(query = '') {
-          listado.innerHTML = '';
+        async function buscarSugerenciasEnSupabase(query = '') {
           const q = query.trim().toLowerCase();
 
-          let filtradas = catalogoAlimentosInteligente.filter(item => {
-            if (!q) return true;
-            return item.nombre.toLowerCase().includes(q) || item.tags.some(tag => tag.toLowerCase().includes(q));
-          });
+          let sugerencias = catalogo.filter(c => c.nombre.toLowerCase().includes(q)).slice(0, 10);
+
+          listado.innerHTML = '';
 
           if (q.length > 0) {
             const itemCustom = document.createElement('div');
             itemCustom.className = 'card';
             itemCustom.style.cssText = 'padding: 10px 14px; cursor: pointer; border: 1px solid var(--primary); background: var(--primary-light); font-weight: 700; color: var(--primary); font-size: 14px; display: flex; align-items: center; gap: 8px;';
-            itemCustom.innerHTML = `<span>+</span> <span>Añadir "${input.value.trim()}"</span>`;
-            itemCustom.addEventListener('click', async () => await guardarAlimentoTexto(input.value.trim()));
+            itemCustom.innerHTML = `<span>+</span> <span>Añadir "${q}"</span>`;
+            itemCustom.addEventListener('click', async () => await guardarYSeleccionarAlimento(q));
             listado.appendChild(itemCustom);
           }
 
-          filtradas.forEach(itemObj => {
-            const item = document.createElement('div');
-            item.className = 'card';
-            item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); font-size: 14px; font-weight: 600;';
-            item.innerHTML = `
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <img src="${itemObj.img}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />
-                <div>
-                  <div>${itemObj.nombre}</div>
-                  <div style="font-size: 10px; color: var(--text-muted);">${itemObj.cat}</div>
-                </div>
-              </div>
-              <span style="color: var(--primary); font-size: 16px;">+</span>
-            `;
+          if (sugerencias.length > 0) {
+            sugerencias.forEach(itemObj => {
+              const item = document.createElement('div');
+              item.className = 'card';
+              item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); font-size: 14px; font-weight: 600;';
+              
+              const imgHtml = itemObj.imagen_url 
+                ? `<img src="${itemObj.imagen_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />`
+                : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 16px;">👨‍🍳</div>`;
 
-            item.addEventListener('click', async () => await guardarAlimentoTexto(itemObj.nombre));
-            listado.appendChild(item);
-          });
+              item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  ${imgHtml}
+                  <div>
+                    <div>${itemObj.nombre}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${itemObj.categoria || 'Alimento'}</div>
+                  </div>
+                </div>
+                <span style="color: var(--primary); font-size: 16px;">+</span>
+              `;
+
+              item.addEventListener('click', async () => await guardarYSeleccionarAlimento(itemObj.nombre, itemObj.imagen_url));
+              listado.appendChild(item);
+            });
+          }
         }
 
-        async function guardarAlimentoTexto(texto) {
+        async function guardarYSeleccionarAlimento(texto, imagenOpt = null) {
+          const limpio = texto.trim();
+          if (!limpio) return;
+
           await supabase.from('plan_semanal').insert([{
             user_id: usuarioActual.id,
             dia_semana: diaSeleccionadoObj.iso,
             comida_tipo: tipoComidaSeleccionado,
             receta_id: null,
-            nota_personalizada: texto
+            nota_personalizada: limpio
           }]);
+
+          const { data: nuevoCat } = await supabase.from('catalogo_alimentos').insert([{
+            nombre: limpio,
+            categoria: tipoComidaSeleccionado,
+            imagen_url: imagenOpt
+          }]).select();
+
+          if (nuevoCat && nuevoCat.length > 0) {
+            cacheCatalogo.push(nuevoCat[0]);
+          }
+
           modal.classList.remove('visible');
           cargarMenuDia();
         }
 
-        chips.forEach(btn => {
-          btn.onclick = () => {
-            chips.forEach(b => { b.classList.remove('active'); b.classList.add('btn-outline'); });
-            btn.classList.add('active'); btn.classList.remove('btn-outline');
-            const q = btn.getAttribute('data-query');
-            input.value = q;
-            renderSugerenciasSemanticas(q);
-          };
-        });
+        input.oninput = () => buscarSugerenciasEnSupabase(input.value);
 
-        input.oninput = () => renderSugerenciasSemanticas(input.value);
-        renderSugerenciasSemanticas();
+        buscarSugerenciasEnSupabase();
         modal.classList.add('visible');
         setTimeout(() => input.focus(), 100);
       });
 
-      // BORRAR ÍTEM INDIVIDUAL DE LA LISTA
       card.querySelectorAll('.btn-delete-subitem').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
           const idBorrar = btn.getAttribute('data-id');
           await supabase.from('plan_semanal').delete().eq('id', idBorrar);
           cargarMenuDia();
@@ -535,19 +514,17 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
-  // GENERAR MENÚ CON TEXTOS Y NAVEGACIÓN
-  function iniciarGeneracionMenu() {
+  // GENERAR MENÚ SOLO PARA EL DÍA SELECCIONADO
+  function iniciarGeneracionMenuDiario() {
     pedirConfirmacion(
-      "Generar Menú Semanal",
-      "Se planificarán automáticamente las comidas de toda la semana de forma equilibrada.",
+      `Generar Menú para el ${diaSeleccionadoObj.nombreLargo}`,
+      "Se planificarán automáticamente las comidas de este día.",
       async () => {
         const btnAuto = container.querySelector('#btnAutoPlan');
         btnAuto.disabled = true;
-        btnAuto.innerText = 'Generando menú...';
+        btnAuto.innerText = 'Generando día...';
 
         try {
-          const { data: misRecetas } = await supabase.from('recetas').select('*').eq('user_id', usuarioActual.id);
-
           function mezclar(array) {
             let arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {
@@ -557,108 +534,76 @@ export function renderPlanView(usuarioActual) {
             return arr;
           }
 
-          const respaldosPorTipo = {
-            'Desayuno': [
-              'Café solo / con leche',
-              'Tostada con tomate y aceite',
-              'Huevos revueltos con aguacate',
-              'Porridge de avena con fruta'
-            ],
-            'Merienda': [
-              'Plátano con almendras',
-              'Yogur proteico con arándanos',
-              'Manzana con canela',
-              'Batido de proteínas de vainilla'
-            ],
-            'Comida': [
-              'Pechuga de pollo a la plancha con verduras',
-              'Pasta integral boloñesa',
-              'Salmón a la plancha con espárragos',
-              'Lentejas guisadas con verduras'
-            ],
-            'Cena': [
-              'Tortilla francesa con ensalada',
-              'Crema de calabacín y quesitos',
-              'Gazpacho fresco con virutas de jamón',
-              'Ensalada mixta con atún y huevo cocido'
-            ]
-          };
-
           const tiposComida = ['Desayuno', 'Comida', 'Merienda', 'Cena'];
-          let asignadosGlobalesSemana = [];
+          let asignadosHoy = [];
 
-          for (const d of diasCalculados) {
-            let asignadosHoy = [];
+          for (const tipo of tiposComida) {
+            // Filtrar recetas aptas que encajen en el tipo de comida y no se hayan asignado hoy
+            const aptas = (cacheMisRecetas || []).filter(r => 
+              (r.categorias || '').includes(tipo) && !asignadosHoy.includes(r.id)
+            );
 
-            for (const tipo of tiposComida) {
-              const aptas = (misRecetas || []).filter(r => 
-                (r.categorias || '').includes(tipo) && 
-                !asignadosHoy.includes(r.id) &&
-                !asignadosGlobalesSemana.includes(r.id)
-              );
+            // Comprobar si ya existe asignación en este día para ese tipo de comida
+            const { data: existe } = await supabase
+              .from('plan_semanal')
+              .select('id')
+              .eq('user_id', usuarioActual.id)
+              .eq('dia_semana', diaSeleccionadoObj.iso)
+              .eq('comida_tipo', tipo);
 
-              const { data: existe } = await supabase
-                .from('plan_semanal')
-                .select('id')
-                .eq('user_id', usuarioActual.id)
-                .eq('dia_semana', d.iso)
-                .eq('comida_tipo', tipo);
+            if (!existe || existe.length === 0) {
+              if (aptas.length > 0) {
+                const recetaElegida = mezclar(aptas)[0];
+                asignadosHoy.push(recetaElegida.id);
 
-              if (!existe || existe.length === 0) {
-                if (aptas.length > 0) {
-                  const recetaElegida = mezclar(aptas)[0];
-                  asignadosHoy.push(recetaElegida.id);
-                  asignadosGlobalesSemana.push(recetaElegida.id);
+                await supabase.from('plan_semanal').insert([{
+                  user_id: usuarioActual.id,
+                  dia_semana: diaSeleccionadoObj.iso,
+                  comida_tipo: tipo,
+                  receta_id: recetaElegida.id,
+                  nota_personalizada: null
+                }]);
+              } else {
+                // Usar catálogo de respaldo
+                const deCat = (cacheCatalogo || []).filter(c => c.categoria === tipo).map(c => c.nombre);
+                const disponibles = deCat.filter(o => !asignadosHoy.includes(o));
+                const alimentoElegido = disponibles.length > 0 ? mezclar(disponibles)[0] : (deCat.length > 0 ? mezclar(deCat)[0] : 'Comida rápida');
 
-                  await supabase.from('plan_semanal').insert([{
-                    user_id: usuarioActual.id,
-                    dia_semana: d.iso,
-                    comida_tipo: tipo,
-                    receta_id: recetaElegida.id,
-                    nota_personalizada: null
-                  }]);
-                } else {
-                  const opciones = respaldosPorTipo[tipo];
-                  const disponibles = opciones.filter(o => !asignadosHoy.includes(o) && !asignadosGlobalesSemana.includes(o));
-                  const alimentoElegido = disponibles.length > 0 ? mezclar(disponibles)[0] : mezclar(opciones)[0];
+                asignadosHoy.push(alimentoElegido);
 
-                  asignadosHoy.push(alimentoElegido);
-                  asignadosGlobalesSemana.push(alimentoElegido);
-
-                  await supabase.from('plan_semanal').insert([{
-                    user_id: usuarioActual.id,
-                    dia_semana: d.iso,
-                    comida_tipo: tipo,
-                    receta_id: null,
-                    nota_personalizada: alimentoElegido
-                  }]);
-                }
+                await supabase.from('plan_semanal').insert([{
+                  user_id: usuarioActual.id,
+                  dia_semana: diaSeleccionadoObj.iso,
+                  comida_tipo: tipo,
+                  receta_id: null,
+                  nota_personalizada: alimentoElegido
+                }]);
               }
             }
           }
 
           cargarMenuDia();
         } catch (err) {
-          console.error("Error al generar menú:", err);
+          console.error("Error al generar menú diario:", err);
         } finally {
           btnAuto.disabled = false;
-          btnAuto.innerHTML = `${sparklerSVG} Generar Menú Semanal`;
+          btnAuto.innerHTML = `${sparklerSVG} Generar Menú Diario`;
         }
       }
     );
   }
 
-  function iniciarLimpiezaMenu() {
+  // VACIAR ÚNICAMENTE EL DÍA SELECCIONADO
+  function iniciarLimpiezaMenuDiario() {
     pedirConfirmacion(
-      "Vaciar Plan Semanal",
-      "¿Deseas eliminar las asignaciones de todos los días de esta semana?",
+      "Vaciar Día",
+      `¿Deseas eliminar las asignaciones del ${diaSeleccionadoObj.nombreLargo}?`,
       async () => {
-        const listaFechas = diasCalculados.map(d => d.iso);
         await supabase
           .from('plan_semanal')
           .delete()
           .eq('user_id', usuarioActual.id)
-          .in('dia_semana', listaFechas);
+          .eq('dia_semana', diaSeleccionadoObj.iso);
 
         cargarMenuDia();
       }
@@ -666,8 +611,8 @@ export function renderPlanView(usuarioActual) {
   }
 
   setTimeout(() => {
-    container.querySelector('#btnAutoPlan').addEventListener('click', iniciarGeneracionMenu);
-    container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenu);
+    container.querySelector('#btnAutoPlan').addEventListener('click', iniciarGeneracionMenuDiario);
+    container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenuDiario);
 
     container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => container.querySelector('#modalSelectReceta').classList.remove('visible'));
     container.querySelector('#btnCloseModalSearch').addEventListener('click', () => container.querySelector('#modalSearchAlimento').classList.remove('visible'));
