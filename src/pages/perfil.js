@@ -129,7 +129,7 @@ export function renderPerfilView(usuarioActual) {
                 <div class="password-wrapper" style="margin-top: 4px; position: relative; display: flex; align-items: center;">
                   <input type="password" id="inputNuevaPassword" placeholder="••••••••" style="height: 38px; width: 100%; padding-right: 36px;" />
                   <button type="button" class="toggle-password" id="btnTogglePass1" title="Mostrar u ocultar contraseña" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; display: flex; align-items: center;">
-                    ${icons.eye || '👁️'}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                   </button>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export function renderPerfilView(usuarioActual) {
                 <div class="password-wrapper" style="margin-top: 4px; position: relative; display: flex; align-items: center;">
                   <input type="password" id="inputConfirmarPassword" placeholder="••••••••" style="height: 38px; width: 100%; padding-right: 36px;" />
                   <button type="button" class="toggle-password" id="btnTogglePass2" title="Mostrar u ocultar contraseña" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; display: flex; align-items: center;">
-                    ${icons.eye || '👁️'}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                   </button>
                 </div>
               </div>
@@ -151,8 +151,9 @@ export function renderPerfilView(usuarioActual) {
           <div id="msgPerfil" style="font-size: 13px; padding: 10px; border-radius: 10px; display: none;"></div>
 
           <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-            <button type="button" id="btnEliminarCuenta" class="btn-outline" style="width: auto; margin:0; padding: 8px 14px; font-size: 12px; font-weight: 700; color: var(--danger); border-color: var(--danger);">
-              🗑️ Eliminar cuenta
+            <button type="button" id="btnEliminarCuenta" class="btn-outline" style="width: auto; margin:0; padding: 8px 14px; font-size: 12px; font-weight: 700; color: var(--danger); border-color: var(--danger); display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>Eliminar cuenta</span>
             </button>
 
             <div style="display: flex; gap: 10px;">
@@ -245,39 +246,31 @@ export function renderPerfilView(usuarioActual) {
     btnCancelarModal.addEventListener('click', cerrarModalAjustes);
     modalEditar.addEventListener('click', (e) => { if (e.target === modalEditar) cerrarModalAjustes(); });
 
-    // ELIMINAR CUENTA COMPLETA DE LA BASE DE DATOS Y AUTH
     btnEliminarCuenta.addEventListener('click', async () => {
-      const confirmacion = confirm('⚠️ ¿Estás seguro/a de que deseas eliminar tu cuenta?\n\nEsta acción eliminará de forma permanente todas tus recetas, notificaciones, perfil y tu acceso a BiteLife.');
+      const confirmacion = confirm('¿Estás seguro/a de que deseas eliminar tu cuenta?\n\nEsta acción eliminará de forma permanente todas tus recetas, notificaciones, perfil y tu acceso a BiteLife.');
 
       if (!confirmacion) return;
 
       btnEliminarCuenta.disabled = true;
-      btnEliminarCuenta.innerText = 'Eliminando...';
+      btnEliminarCuenta.innerHTML = '<span>Eliminando...</span>';
 
       try {
-        const uid = usuarioActual.id;
-
-        // 1. Borrar datos de tablas públicas
-        await supabase.from('recetas').delete().eq('user_id', uid);
-        await supabase.from('notificaciones').delete().or(`user_id.eq.${uid},emisor_id.eq.${uid}`);
-        await supabase.from('seguidores').delete().or(`seguidor_id.eq.${uid},seguido_id.eq.${uid}`);
-        await supabase.from('perfiles').delete().eq('id', uid);
-
-        // 2. Eliminar usuario de auth.users usando la función RPC
         const { error: rpcErr } = await supabase.rpc('borrar_cuenta_usuario');
 
         if (rpcErr) {
-          console.error('Error al borrar autenticación:', rpcErr);
+          alert('Error al eliminar la cuenta: ' + rpcErr.message);
+          btnEliminarCuenta.disabled = false;
+          btnEliminarCuenta.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>Eliminar cuenta</span>';
+          return;
         }
 
-        // 3. Cerrar sesión y recargar
         await supabase.auth.signOut();
         window.location.reload();
 
       } catch (err) {
-        alert('Error al eliminar la cuenta: ' + err.message);
+        alert('Error inesperado: ' + err.message);
         btnEliminarCuenta.disabled = false;
-        btnEliminarCuenta.innerText = '🗑️ Eliminar cuenta';
+        btnEliminarCuenta.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>Eliminar cuenta</span>';
       }
     });
 
@@ -468,7 +461,7 @@ export function renderPerfilView(usuarioActual) {
         msg.style.display = 'block';
         msg.style.background = '#fee2e2';
         msg.style.color = 'var(--danger)';
-        msg.innerText = '⚠️ Username no válido.';
+        msg.innerText = 'Username no válido.';
         return;
       }
 
@@ -483,7 +476,7 @@ export function renderPerfilView(usuarioActual) {
         msg.style.display = 'block';
         msg.style.background = '#fee2e2';
         msg.style.color = 'var(--danger)';
-        msg.innerText = perfilErr.code === '23505' ? '⚠️ El nombre de usuario ya está ocupado.' : 'Error al guardar el perfil.';
+        msg.innerText = perfilErr.code === '23505' ? 'El nombre de usuario ya está ocupado.' : 'Error al guardar el perfil.';
         return;
       }
 
@@ -492,7 +485,7 @@ export function renderPerfilView(usuarioActual) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ Debes rellenar los dos campos de contraseña.';
+          msg.innerText = 'Debes rellenar los dos campos de contraseña.';
           return;
         }
 
@@ -500,7 +493,7 @@ export function renderPerfilView(usuarioActual) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ Las contraseñas escritas no coinciden. Por favor, revísalas.';
+          msg.innerText = 'Las contraseñas escritas no coinciden. Por favor, revísalas.';
           return;
         }
 
@@ -509,7 +502,7 @@ export function renderPerfilView(usuarioActual) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ La contraseña debe tener mínimo 6 caracteres, 1 mayúscula, 1 número y 1 carácter especial.';
+          msg.innerText = 'La contraseña debe tener mínimo 6 caracteres, 1 mayúscula, 1 número y 1 carácter especial.';
           return;
         }
 
@@ -521,7 +514,7 @@ export function renderPerfilView(usuarioActual) {
           msg.style.color = 'var(--danger)';
           
           if (passErr.message && passErr.message.toLowerCase().includes('should be different')) {
-            msg.innerText = '⚠️ La nueva contraseña debe ser diferente a la contraseña actual.';
+            msg.innerText = 'La nueva contraseña debe ser diferente a la contraseña actual.';
           } else {
             msg.innerText = 'Error actualizando contraseña: ' + passErr.message;
           }
@@ -531,7 +524,7 @@ export function renderPerfilView(usuarioActual) {
         msg.style.display = 'block';
         msg.style.background = 'var(--primary-light)';
         msg.style.color = 'var(--primary)';
-        msg.innerText = '🔒 Contraseña cambiada con éxito. Cerrando sesión por seguridad...';
+        msg.innerText = 'Contraseña cambiada con éxito. Cerrando sesión por seguridad...';
 
         setTimeout(async () => {
           await supabase.auth.signOut();
@@ -544,7 +537,7 @@ export function renderPerfilView(usuarioActual) {
       msg.style.display = 'block';
       msg.style.background = 'var(--primary-light)';
       msg.style.color = 'var(--primary)';
-      msg.innerText = '✅ ¡Ajustes e información guardados con éxito!';
+      msg.innerText = '¡Ajustes e información guardados con éxito!';
       
       setTimeout(() => {
         cerrarModalAjustes();

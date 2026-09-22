@@ -24,24 +24,24 @@ export function renderAuthView(onLoginSuccess) {
         <div id="secCamposRegistro" class="hidden" style="display: flex; flex-direction: column; gap: 14px;">
           <div>
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Nombre de usuario (@username)</label>
-            <input type="text" id="inputRegUsername" placeholder="ej: ruizber" style="margin-top: 4px; text-transform: lowercase;" />
+            <input type="text" id="inputRegUsername" placeholder="" style="margin-top: 4px; text-transform: lowercase;" />
           </div>
 
           <div>
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Nombre Completo</label>
-            <input type="text" id="inputRegNombre" placeholder="ej: Fernando Ruiz Berciano" style="margin-top: 4px;" />
+            <input type="text" id="inputRegNombre" placeholder="" style="margin-top: 4px;" />
           </div>
         </div>
 
         <div>
           <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Correo Electrónico</label>
-          <input type="email" id="inputEmail" placeholder="tu@email.com" required style="margin-top: 4px;" />
+          <input type="email" id="inputEmail" placeholder="" required style="margin-top: 4px;" />
         </div>
 
         <div>
           <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Contraseña</label>
           <div style="position: relative; display: flex; align-items: center; width: 100%; margin-top: 4px;">
-            <input type="password" id="inputPassword" placeholder="••••••••" required style="width: 100%; padding-right: 42px; margin: 0; box-sizing: border-box;" />
+            <input type="password" id="inputPassword" placeholder="" required style="width: 100%; padding-right: 42px; margin: 0; box-sizing: border-box;" />
             <button type="button" id="btnToggleAuthPass" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; z-index: 2;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -128,7 +128,7 @@ export function renderAuthView(onLoginSuccess) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ Debes elegir un nombre de usuario válido.';
+          msg.innerText = 'Debes elegir un nombre de usuario válido.';
           return;
         }
 
@@ -137,21 +137,24 @@ export function renderAuthView(onLoginSuccess) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ La contraseña no cumple con los requisitos de seguridad.';
+          msg.innerText = 'La contraseña no cumple con los requisitos de seguridad.';
           return;
         }
 
         btnSubmit.disabled = true;
         btnSubmit.innerText = 'Creando cuenta...';
 
-        // Redirección dinámica según el dominio activo en el navegador
         const redirectUrl = window.location.origin;
 
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: redirectUrl
+            emailRedirectTo: redirectUrl,
+            data: {
+              username: username,
+              nombre_completo: nombreCompleto || username
+            }
           }
         });
 
@@ -177,12 +180,12 @@ export function renderAuthView(onLoginSuccess) {
           msg.style.color = 'var(--primary)';
           
           if (authData.session) {
-            msg.innerText = '✅ ¡Cuenta creada con éxito!';
+            msg.innerText = '¡Cuenta creada con éxito!';
             setTimeout(() => {
               if (onLoginSuccess) onLoginSuccess();
             }, 1000);
           } else {
-            msg.innerText = '📩 Te hemos enviado un correo de confirmación. Por favor, revisa tu bandeja de entrada.';
+            msg.innerText = 'Te hemos enviado un correo de confirmación. Por favor, revisa tu bandeja de entrada.';
             btnSubmit.disabled = false;
             btnSubmit.innerText = 'Registrarse';
           }
@@ -200,7 +203,7 @@ export function renderAuthView(onLoginSuccess) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = '⚠️ Credenciales incorrectas o correo no confirmado.';
+          msg.innerText = 'Credenciales incorrectas o correo no confirmado.';
           btnSubmit.disabled = false;
           btnSubmit.innerText = 'Entrar';
           return;
