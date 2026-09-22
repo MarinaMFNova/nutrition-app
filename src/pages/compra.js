@@ -1,444 +1,349 @@
 import { supabase } from '../supabase.js';
+import { icons } from '../icons.js';
+
+// Lista de palabras vacías que NO son ingredientes de compra
+const PALABRAS_VACIAS = [
+  'con', 'del', 'de', 'la', 'los', 'las', 'el', 'un', 'una', 'unos', 'unas',
+  'solo', 'sola', 'solos', 'solas', 'para', 'por', 'sin', 'tipo', 'modo', 'estilo'
+];
+
+// Función limpiadora de ingredientes y cantidades
+function limpiarTextoIngrediente(texto) {
+  if (!texto) return '';
+
+  let limpio = texto.toLowerCase();
+
+  // 1. Eliminar cantidades y fracciones (ej: 250, 1.5, 1/2)
+  limpio = limpio.replace(/\b\d+([.,\/]\d+)?\b/g, '');
+
+  // 2. Eliminar unidades de medida comunes
+  const unidades = [
+    'gr', 'gramos', 'g', 'kg', 'kilos', 'kilo', 
+    'ml', 'l', 'litro', 'litros', 'cl', 
+    'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 
+    'taza', 'tazas', 'vaso', 'vasos', 'pizca', 'pizcas', 
+    'diente', 'dientes', 'unidades', 'unidad', 'uds', 'ud',
+    'bote', 'botes', 'paquete', 'paquetes', 'lata', 'latas', 'chorrito'
+  ];
+  
+  const regexUnidades = new RegExp(`\\b(${unidades.join('|')})\\b`, 'gi');
+  limpio = limpio.replace(regexUnidades, '');
+
+  // 3. Eliminar caracteres especiales
+  limpio = limpio.replace(/[\(\)\-\*:\.]/g, ' ');
+
+  // 4. Limpiar espacios múltiples
+  limpio = limpio.trim().replace(/\s+/g, ' ');
+
+  if (!limpio || PALABRAS_VACIAS.includes(limpio)) return '';
+
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1);
+}
+
+// Extrae ingredientes individuales descomponiendo frases como "Tostada con aguacate y huevo"
+function extraerIngredientesDeNota(nota) {
+  if (!nota) return [];
+
+  // Separar por conectores como 'con', 'y', '/', ',', '+' o 'de'
+  const partes = nota.split(/\s+(?:con|y|\+|\/|,)\s+|\/|,|\+/i);
+  const resultados = [];
+
+  partes.forEach(p => {
+    let limpia = p.trim();
+    // Si la parte empieza por "tostada de...", "tortitas de...", quitamos el tipo de preparación si procede
+    limpia = limpia.replace(/^(tostada|tostadas|tortita|tortitas|batido|batidos)\s+(de\s+la|del|de)?\s*/gi, '');
+
+    const final = limpiarTextoIngrediente(limpia);
+    if (final && !PALABRAS_VACIAS.includes(final.toLowerCase()) && !resultados.includes(final)) {
+      resultados.push(final);
+    }
+  });
+
+  return resultados;
+}
 
 export function renderCompraView(usuarioActual) {
   const container = document.createElement('div');
   container.className = 'container';
 
-  const whatsappSVG = `
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.38 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-  `;
-
-  const pdfSVG = `
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <line x1="16" y1="13" x2="8" y2="13"></line>
-      <line x1="16" y1="17" x2="8" y2="17"></line>
-      <polyline points="10 9 9 9 8 9"></polyline>
-    </svg>
-  `;
-
-  const desgloseAlimentosRapidos = {
-    'Café solo / con leche': ['Café', 'Leche / Bebida vegetal'],
-    'Tostada con tomate y aceite': ['Pan integral', 'Tomates maduros', 'Aceite de oliva'],
-    'Tostada con aguacate y huevo': ['Pan integral', 'Aguacates', 'Huevos'],
-    'Porridge de avena con fruta': ['Avena', 'Leche / Bebida vegetal', 'Fruta de temporada'],
-    'Huevos revueltos con aguacate': ['Huevos', 'Aguacates'],
-    'Pechuga de pollo a la plancha con verduras': ['Pechuga de pollo', 'Verduras variadas'],
-    'Salmón a la plancha con espárragos': ['Lomos de salmón', 'Espárragos verdes'],
-    'Pasta integral boloñesa': ['Pasta integral', 'Carne picada', 'Salsa de tomate'],
-    'Arroz integral con salteado de verduras y pavo': ['Arroz integral', 'Verduras variadas', 'Pavo'],
-    'Lentejas guisadas con verduras': ['Lentejas', 'Verduras para guiso'],
-    'Plátano con almendras': ['Plátanos', 'Almendras'],
-    'Manzana con canela': ['Manzanas', 'Canela'],
-    'Yogur proteico con arándanos': ['Yogur proteico', 'Arándanos'],
-    'Batido de proteínas de vainilla': ['Proteína en polvo', 'Leche / Bebida vegetal'],
-    'Tortilla francesa con ensalada': ['Huevos', 'Bolsa de ensalada variada'],
-    'Crema de calabacín y quesitos': ['Calabacines', 'Quesitos suaves'],
-    'Ensalada mixta con atún y huevo cocido': ['Lechuga', 'Latita de atún', 'Huevos'],
-    'Gazpacho fresco con virutas de jamón': ['Gazpacho', 'Jamón serrano']
-  };
+  let itemsLista = [];
+  let ingredientesUnicosDisponibles = [];
 
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+    <!-- CABECERA DE LA VISTA -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
       <div>
-        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary);">🛒 Lista de la Compra</h1>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+          <span style="display: flex; align-items: center; color: var(--primary);">${icons.compra}</span>
+          <span>Lista de la Compra</span>
+        </h1>
         <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Gestiona tus artículos y productos pendientes</p>
       </div>
 
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button id="btnImportarMenu" class="btn-outline" style="width: auto; padding: 8px 14px; margin: 0; font-size: 13px; font-weight: 600;">
-          📥 Cargar ingredientes de la semana
+      <!-- BOTONERA ACCIONES UNIFICADA -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <button id="btnCargarPlan" class="btn-outline" style="width: auto; height: 38px; padding: 0 14px; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+          ${icons.plan} Cargar del plan
         </button>
-        <button id="btnExportarPDF" class="btn-outline" style="width: auto; padding: 8px 14px; margin: 0; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-          ${pdfSVG} Descargar PDF
+        <button id="btnExportarPDF" class="btn-outline" style="width: auto; height: 38px; padding: 0 14px; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+          ${icons.download} PDF
         </button>
-        <button id="btnEnviarWhatsApp" class="btn-primary" style="width: auto; padding: 8px 16px; margin: 0; font-size: 13px; font-weight: 700; background: #25D366; border: none; color: white; display: inline-flex; align-items: center; gap: 6px;">
-          ${whatsappSVG} Enviar por WhatsApp
+        <button id="btnCompartirWA" class="btn-outline" style="width: auto; height: 38px; padding: 0 14px; font-size: 12px; font-weight: 700; border-radius: 10px; background: var(--primary-light); color: var(--primary); border-color: var(--primary); display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+          ${icons.whatsapp} Enviar WhatsApp
         </button>
       </div>
     </div>
 
-    <div class="card" style="margin-bottom: 20px;">
-      <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px; color: var(--primary);">➕ Añadir Producto</h3>
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="compraItemInput" placeholder="Ej: Leche, Huevos, Manzanas..." style="margin: 0; height: 42px;">
-        <button id="btnAgregarItemCompra" style="width: auto; padding: 0 18px; margin: 0; white-space: nowrap;">Añadir a la lista</button>
+    <!-- CAJA PARA AÑADIR PRODUCTO MANUALMENTE -->
+    <div class="card" style="padding: 18px; margin-bottom: 20px; border-radius: 18px;">
+      <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 18px;">+</span> Añadir Producto
+      </h3>
+      <form id="formAddProducto" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="inputNuevoProducto" placeholder="Ej: Leche, Huevos, Manzanas..." required style="flex: 1; margin: 0; height: 42px;" />
+        <button type="submit" style="width: auto; margin: 0; padding: 0 20px; height: 42px; font-size: 13px; font-weight: 700; border-radius: 12px;">
+          Añadir a la lista
+        </button>
+      </form>
+    </div>
+
+    <!-- SECCIÓN MI LISTA -->
+    <div class="card" style="padding: 20px; border-radius: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-main);">Mi Lista</h3>
+        <button id="btnLimpiarLista" class="btn-outline" style="width: auto; padding: 4px 10px; font-size: 11px; margin: 0; color: var(--danger); border-color: transparent; display: flex; align-items: center; gap: 4px;">
+          ${icons.trash} Vaciar lista
+        </button>
+      </div>
+
+      <div id="contenedorListaCompra" style="display: flex; flex-direction: column; gap: 8px;">
+        Cargando productos...
       </div>
     </div>
 
-    <div class="card">
-      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 16px;">Mi Lista</h3>
-      <div id="listaCompraContenido">Cargando lista...</div>
-    </div>
-
-    <!-- MODAL DE SELECCIÓN DE INGREDIENTES SEMANALES -->
+    <!-- MODAL SELECCIÓN DE INGREDIENTES ÚNICOS DEL PLAN -->
     <div id="modalSeleccionarIngredientes" class="sidebar-overlay">
-      <div class="card" style="max-width: 480px; width: 92%; margin: 50px auto; max-height: 80vh; padding: 20px; display: flex; flex-direction: column;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 18px; color: var(--primary); font-weight: 800;">Selecciona ingredientes</h3>
-          <button id="btnCloseModalIngredientes" style="width: auto; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
+      <div class="card" style="max-width: 500px; width: 92%; margin: 50px auto; max-height: 85vh; padding: 22px; display: flex; flex-direction: column; border-radius: 20px; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+            ${icons.plan} Seleccionar ingredientes del plan
+          </h3>
+          <button id="btnCloseModalIngredientes" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0; width: auto;">✕</button>
         </div>
-        
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px 0;">Marca los ingredientes desglosados que te hagan falta:</p>
 
-        <div id="listadoIngredientesSeleccionables" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; flex: 1; margin-bottom: 16px;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Ingredientes únicos encontrados en tu plan de la semana:</p>
+          <div style="display: flex; gap: 6px;">
+            <button id="btnSelectAll" class="btn-outline" style="width: auto; padding: 2px 8px; font-size: 10px; margin:0; border-radius: 6px;">Marcar todos</button>
+            <button id="btnUnselectAll" class="btn-outline" style="width: auto; padding: 2px 8px; font-size: 10px; margin:0; border-radius: 6px;">Desmarcar</button>
+          </div>
+        </div>
 
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button id="btnCancelarImportacion" class="btn-outline" style="width: auto; padding: 8px 16px; margin: 0;">Cancelar</button>
-          <button id="btnConfirmarImportacion" class="btn-primary" style="width: auto; padding: 8px 20px; margin: 0;">Añadir Seleccionados</button>
+        <div id="listadoModalIngredientes" style="display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; padding-right: 4px; flex: 1;">
+          Cargando ingredientes del plan...
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+          <button type="button" id="btnCancelarModalIngredientes" class="btn-outline" style="width: auto; padding: 8px 16px; margin: 0;">Cancelar</button>
+          <button type="button" id="btnConfirmarAñadirIngredientes" class="btn-primary" style="width: auto; padding: 8px 20px; margin: 0;">Añadir seleccionados</button>
         </div>
       </div>
     </div>
   `;
 
-  let itemsActuales = [];
+  setTimeout(() => {
+    const contenedor = container.querySelector('#contenedorListaCompra');
+    const formAdd = container.querySelector('#formAddProducto');
+    const inputProducto = container.querySelector('#inputNuevoProducto');
 
-  async function cargarListaCompra() {
-    const list = container.querySelector('#listaCompraContenido');
-    const { data, error } = await supabase
-      .from('lista_compra')
-      .select('*')
-      .eq('user_id', usuarioActual.id)
-      .order('created_at', { ascending: false });
+    const modalIngredientes = container.querySelector('#modalSeleccionarIngredientes');
+    const listadoModal = container.querySelector('#listadoModalIngredientes');
+    const btnCloseModal = container.querySelector('#btnCloseModalIngredientes');
+    const btnCancelarModal = container.querySelector('#btnCancelarModalIngredientes');
+    const btnConfirmarAñadir = container.querySelector('#btnConfirmarAñadirIngredientes');
+    const btnSelectAll = container.querySelector('#btnSelectAll');
+    const btnUnselectAll = container.querySelector('#btnUnselectAll');
 
-    if (error || !data || data.length === 0) {
-      itemsActuales = [];
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">La lista de la compra está vacía.</p>';
-      return;
+    function obtenerProductosStorage() {
+      const guardados = localStorage.getItem(`bitelife_compra_${usuarioActual.id}`);
+      return guardados ? JSON.parse(guardados) : [];
     }
 
-    itemsActuales = data;
-    list.innerHTML = '';
+    function guardarProductosStorage(items) {
+      localStorage.setItem(`bitelife_compra_${usuarioActual.id}`, JSON.stringify(items));
+    }
 
-    data.forEach(i => {
-      const div = document.createElement('div');
-      div.className = `checklist-item ${i.comprado ? 'done' : ''}`;
-      div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border);';
-      
-      div.innerHTML = `
-        <span style="cursor: pointer; flex: 1; font-weight: 600; ${i.comprado ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${i.item}</span>
-        <button class="btn-danger btn-delete-item" style="width:auto; padding: 4px 10px; font-size: 12px; margin: 0; border-radius: 6px;">✕</button>
-      `;
+    function renderizarLista() {
+      itemsLista = obtenerProductosStorage();
 
-      div.querySelector('span').addEventListener('click', async () => {
-        await supabase.from('lista_compra').update({ comprado: !i.comprado }).eq('id', i.id);
-        cargarListaCompra();
-      });
-
-      div.querySelector('.btn-delete-item').addEventListener('click', async (e) => {
-        e.stopPropagation();
-        await supabase.from('lista_compra').delete().eq('id', i.id);
-        cargarListaCompra();
-      });
-
-      list.appendChild(div);
-    });
-  }
-
-  async function abrirModalSeleccionIngredientes() {
-    const modal = container.querySelector('#modalSeleccionarIngredientes');
-    const listado = container.querySelector('#listadoIngredientesSeleccionables');
-
-    listado.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Desglosando ingredientes...</p>';
-    modal.classList.add('visible');
-
-    try {
-      const d = new Date();
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const lunes = new Date(d.setDate(diff));
-
-      const fechasSemana = [];
-      for (let i = 0; i < 7; i++) {
-        const fechaIter = new Date(lunes);
-        fechaIter.setDate(lunes.getDate() + i);
-        fechasSemana.push(fechaIter.toISOString().split('T')[0]);
-      }
-
-      const { data: plan } = await supabase
-        .from('plan_semanal')
-        .select('*')
-        .eq('user_id', usuarioActual.id)
-        .in('dia_semana', fechasSemana);
-
-      const { data: recetas } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('user_id', usuarioActual.id);
-
-      let ingredientesExtraidos = [];
-
-      if (plan && plan.length > 0) {
-        plan.forEach(item => {
-          if (item.receta_id && recetas) {
-            const rec = recetas.find(r => r.id === item.receta_id);
-            if (rec && rec.ingredientes) {
-              rec.ingredientes.split('\n').forEach(ing => {
-                if (ing.trim()) ingredientesExtraidos.push(ing.trim());
-              });
-            } else if (rec) {
-              ingredientesExtraidos.push(rec.nombre);
-            }
-          } else if (item.nota_personalizada) {
-            const nombrePlato = item.nota_personalizada;
-            const desglose = desgloseAlimentosRapidos[nombrePlato];
-
-            if (desglose) {
-              ingredientesExtraidos.push(...desglose);
-            } else {
-              ingredientesExtraidos.push(nombrePlato);
-            }
-          }
-        });
-      }
-
-      const unicos = [...new Set(ingredientesExtraidos)];
-      const existentesNombres = itemsActuales.map(i => i.item.toLowerCase());
-
-      const candidatos = unicos.filter(ing => !existentesNombres.includes(ing.toLowerCase()));
-
-      if (candidatos.length === 0) {
-        listado.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0;">No hay nuevos ingredientes que añadir de la semana.</p>';
+      if (itemsLista.length === 0) {
+        contenedor.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; margin: 0;">La lista de la compra está vacía.</p>`;
         return;
       }
 
-      listado.innerHTML = candidatos.map(ing => `
-        <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border); cursor: pointer; font-size: 14px; font-weight: 600;">
-          <input type="checkbox" class="chk-importar-item" value="${ing}" checked style="width: 16px; height: 16px; accent-color: var(--primary);" />
-          <span>${ing}</span>
-        </label>
-      `).join('');
+      contenedor.innerHTML = '';
+      itemsLista.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);';
+        
+        itemDiv.innerHTML = `
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 600; flex: 1; ${item.comprado ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+            <input type="checkbox" ${item.comprado ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); margin: 0;" />
+            <span>${item.nombre}</span>
+          </label>
+          <button class="btn-eliminar-item" style="background: none; border: none; padding: 4px; margin: 0; width: auto; color: var(--text-muted); cursor: pointer;" title="Eliminar producto">
+            ${icons.trash}
+          </button>
+        `;
 
-    } catch (err) {
-      console.error("Error al desglosar ingredientes:", err);
-    }
-  }
+        itemDiv.querySelector('input').addEventListener('change', (e) => {
+          itemsLista[index].comprado = e.target.checked;
+          guardarProductosStorage(itemsLista);
+          renderizarLista();
+        });
 
-  async function confirmarImportacion() {
-    const seleccionados = [];
-    container.querySelectorAll('.chk-importar-item:checked').forEach(chk => {
-      seleccionados.push(chk.value);
-    });
+        itemDiv.querySelector('.btn-eliminar-item').addEventListener('click', () => {
+          itemsLista.splice(index, 1);
+          guardarProductosStorage(itemsLista);
+          renderizarLista();
+        });
 
-    if (seleccionados.length > 0) {
-      const payload = seleccionados.map(ing => ({ user_id: usuarioActual.id, item: ing, comprado: false }));
-      await supabase.from('lista_compra').insert(payload);
-      cargarListaCompra();
-    }
-
-    container.querySelector('#modalSeleccionarIngredientes').classList.remove('visible');
-  }
-
-  // 1. MANDAR LISTA POR WHATSAPP
-  function exportarAWhatsApp() {
-    if (itemsActuales.length === 0) {
-      alert("La lista de la compra está vacía.");
-      return;
+        contenedor.appendChild(itemDiv);
+      });
     }
 
-    const textoWhatsApp = `🛒 *Lista de la Compra - BiteLife*\n\n` + 
-      itemsActuales.map(i => `${i.comprado ? '✅' : '•'} ${i.item}`).join('\n') +
-      `\n\n_Generado con BiteLife_`;
+    formAdd.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const valor = inputProducto.value.trim();
+      if (!valor) return;
 
-    const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoWhatsApp)}`;
-    window.open(urlWhatsApp, '_blank');
-  }
-
-function exportarAPDF() {
-    if (itemsActuales.length === 0) {
-      alert("La lista de la compra está vacía.");
-      return;
-    }
-
-    const ventana = window.open('', '_blank');
-    
-    const itemsHtml = itemsActuales.map(i => `
-      <div class="item-row ${i.comprado ? 'comprado' : ''}">
-        <div class="item-left">
-          <span class="checkbox-box">${i.comprado ? '✓' : ''}</span>
-          <span class="item-text">${i.item}</span>
-        </div>
-        <span class="status-badge ${i.comprado ? 'status-done' : 'status-pending'}">
-          ${i.comprado ? 'Comprado' : 'Pendiente'}
-        </span>
-      </div>
-    `).join('');
-
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title></title>
-        <style>
-          @page { 
-            size: A4; 
-            margin: 15mm; 
-          }
-          body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: #1f2937;
-            background-color: #fff;
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .pdf-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #0d9488;
-            padding-bottom: 16px;
-            margin-bottom: 24px;
-          }
-          .brand-title {
-            font-size: 26px;
-            font-weight: 800;
-            color: #0d9488;
-            margin: 0;
-          }
-          .meta-info {
-            font-size: 12px;
-            color: #6b7280;
-            text-align: right;
-          }
-          .list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-          }
-          .item-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px;
-            background-color: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-          }
-          .item-row.comprado {
-            background-color: #f3f4f6;
-            opacity: 0.65;
-          }
-          .item-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-          }
-          .checkbox-box {
-            width: 18px;
-            height: 18px;
-            border: 2px solid #0d9488;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #0d9488;
-            background-color: #fff;
-          }
-          .item-text {
-            font-size: 14px;
-            font-weight: 600;
-            color: #111827;
-          }
-          .item-row.comprado .item-text {
-            text-decoration: line-through;
-          }
-          .status-badge {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .status-pending {
-            background-color: #fef3c7;
-            color: #d97706;
-          }
-          .status-done {
-            background-color: #d1fae5;
-            color: #059669;
-          }
-          .pdf-footer {
-            margin-top: 30px;
-            padding-top: 12px;
-            border-top: 1px solid #f3f4f6;
-            font-size: 11px;
-            color: #9ca3af;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="pdf-header">
-          <div>
-            <h1 class="brand-title">🛒 BiteLife</h1>
-            <span style="font-size: 13px; color: #4b5563; font-weight: 600;">Lista de la Compra</span>
-          </div>
-          <div class="meta-info">
-            <div>Fecha: <strong>${new Date().toLocaleDateString('es-ES')}</strong></div>
-            <div>Total artículos: <strong>${itemsActuales.length}</strong></div>
-          </div>
-        </div>
-
-        <div class="list-container">
-          ${itemsHtml}
-        </div>
-
-        <div class="pdf-footer">
-          Generado automáticamente con BiteLife App
-        </div>
-
-        <script>
-          window.onload = function() {
-            document.title = "";
-            window.print();
-            window.close();
-          }
-        </script>
-      </body>
-      </html>
-    `);
-    ventana.document.close();
-  }
-  setTimeout(() => {
-    container.querySelector('#btnAgregarItemCompra').addEventListener('click', async () => {
-      const input = container.querySelector('#compraItemInput');
-      const item = input.value.trim();
-      if (!item) return;
-
-      await supabase.from('lista_compra').insert([{ user_id: usuarioActual.id, item, comprado: false }]);
-      input.value = '';
-      cargarListaCompra();
+      itemsLista.push({ nombre: valor, comprado: false });
+      guardarProductosStorage(itemsLista);
+      inputProducto.value = '';
+      renderizarLista();
     });
 
-    container.querySelector('#btnImportarMenu').addEventListener('click', abrirModalSeleccionIngredientes);
-    container.querySelector('#btnConfirmarImportacion').addEventListener('click', confirmarImportacion);
-    
-    container.querySelector('#btnCancelarImportacion').addEventListener('click', () => {
-      container.querySelector('#modalSeleccionarIngredientes').classList.remove('visible');
+    // ABRIR MODAL CON INGREDIENTES ÚNICOS
+    container.querySelector('#btnCargarPlan').addEventListener('click', async () => {
+      listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Buscando ingredientes en tu plan...</p>';
+      modalIngredientes.classList.add('visible');
+
+      const { data: plan } = await supabase
+        .from('plan_semanal')
+        .select('receta_id, nota_personalizada, recetas:receta_id(nombre, ingredientes)')
+        .eq('user_id', usuarioActual.id);
+
+      if (!plan || plan.length === 0) {
+        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No tienes recetas o alimentos en tu plan semanal.</p>';
+        return;
+      }
+
+      const conjuntoIngredientes = new Set();
+
+      plan.forEach(item => {
+        // Caso 1: Ingredientes de Recetas
+        if (item.recetas && item.recetas.ingredientes) {
+          const lineas = item.recetas.ingredientes.split('\n');
+          lineas.forEach(l => {
+            const limpio = limpiarTextoIngrediente(l);
+            if (limpio) conjuntoIngredientes.add(limpio);
+          });
+        } 
+        // Caso 2: Alimentos rápidos / notas descompuestas
+        else if (item.nota_personalizada) {
+          const extraidos = extraerIngredientesDeNota(item.nota_personalizada);
+          extraidos.forEach(ing => conjuntoIngredientes.add(ing));
+        }
+      });
+
+      ingredientesUnicosDisponibles = Array.from(conjuntoIngredientes).sort();
+
+      if (ingredientesUnicosDisponibles.length === 0) {
+        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No se encontraron ingredientes desglosados en tu plan.</p>';
+        return;
+      }
+
+      listadoModal.innerHTML = '';
+
+      ingredientesUnicosDisponibles.forEach((ing, idx) => {
+        const idChk = `ing_unique_chk_${idx}`;
+        const yaExiste = itemsLista.some(e => e.nombre.toLowerCase() === ing.toLowerCase());
+
+        const divItem = document.createElement('div');
+        divItem.style.cssText = 'padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);';
+        
+        divItem.innerHTML = `
+          <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; cursor: pointer; margin:0; color: var(--text-main);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="checkbox" class="chk-plan-item" id="${idChk}" value="${ing}" style="width: 18px; height: 18px; accent-color: var(--primary); margin:0;" />
+              <span>${ing}</span>
+            </div>
+            ${yaExiste ? '<span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">(ya en tu lista)</span>' : ''}
+          </label>
+        `;
+
+        listadoModal.appendChild(divItem);
+      });
     });
 
-    container.querySelector('#btnCloseModalIngredientes').addEventListener('click', () => {
-      container.querySelector('#modalSeleccionarIngredientes').classList.remove('visible');
+    btnSelectAll.addEventListener('click', () => {
+      listadoModal.querySelectorAll('.chk-plan-item').forEach(c => c.checked = true);
     });
 
-    container.querySelector('#modalSeleccionarIngredientes').addEventListener('click', (e) => {
-      if (e.target.id === 'modalSeleccionarIngredientes') {
-        container.querySelector('#modalSeleccionarIngredientes').classList.remove('visible');
+    btnUnselectAll.addEventListener('click', () => {
+      listadoModal.querySelectorAll('.chk-plan-item').forEach(c => c.checked = false);
+    });
+
+    btnConfirmarAñadir.addEventListener('click', () => {
+      const seleccionados = [];
+
+      listadoModal.querySelectorAll('.chk-plan-item:checked').forEach(chk => {
+        seleccionados.push(chk.value);
+      });
+
+      if (seleccionados.length === 0) {
+        alert('Por favor, marca al menos un ingrediente para añadir.');
+        return;
+      }
+
+      const nuevos = [];
+      seleccionados.forEach(nombreIng => {
+        if (!itemsLista.some(i => i.nombre.toLowerCase() === nombreIng.toLowerCase())) {
+          nuevos.push({ nombre: nombreIng, comprado: false });
+        }
+      });
+
+      itemsLista = [...itemsLista, ...nuevos];
+      guardarProductosStorage(itemsLista);
+      renderizarLista();
+      modalIngredientes.classList.remove('visible');
+    });
+
+    btnCloseModal.addEventListener('click', () => modalIngredientes.classList.remove('visible'));
+    btnCancelarModal.addEventListener('click', () => modalIngredientes.classList.remove('visible'));
+    modalIngredientes.addEventListener('click', (e) => { if (e.target === modalIngredientes) modalIngredientes.classList.remove('visible'); });
+
+    container.querySelector('#btnLimpiarLista').addEventListener('click', () => {
+      if (itemsLista.length === 0) return;
+      if (confirm('¿Vaciar toda la lista de la compra?')) {
+        itemsLista = [];
+        guardarProductosStorage([]);
+        renderizarLista();
       }
     });
 
-    container.querySelector('#btnEnviarWhatsApp').addEventListener('click', exportarAWhatsApp);
-    container.querySelector('#btnExportarPDF').addEventListener('click', exportarAPDF);
+    container.querySelector('#btnCompartirWA').addEventListener('click', () => {
+      if (itemsLista.length === 0) return alert('La lista está vacía.');
+      const texto = `🛒 *Lista de la Compra BiteLife*:\n\n` + itemsLista.map(i => `${i.comprado ? '✅' : '•'} ${i.nombre}`).join('\n');
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+    });
 
-    cargarListaCompra();
+    container.querySelector('#btnExportarPDF').addEventListener('click', () => {
+      if (itemsLista.length === 0) return alert('La lista está vacía.');
+      window.print();
+    });
+
+    renderizarLista();
   }, 0);
 
   return container;

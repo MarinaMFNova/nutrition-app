@@ -1,12 +1,9 @@
 import { supabase } from '../supabase.js';
+import { icons } from '../icons.js';
 
 export function renderRecetasView(usuarioActual, abrirFormularioInicial = false) {
   const container = document.createElement('div');
   container.className = 'recetas-page-container';
-
-  const searchSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
-  const editSVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
-  const trashSVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
 
   let recetas = [];
   let busqueda = '';
@@ -14,32 +11,44 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let recetaEditandoId = null;
 
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-      <div>
-        <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: var(--text-main);">Mis Recetas</h1>
-        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-muted);">Gestiona tus platos y preparaciones favoritas</p>
-      </div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+            <span style="display: flex; align-items: center; color: var(--primary);">${icons.recetas}</span>
+            <span>Mis Recetas</span>
+          </h1>
+          <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Gestiona tus platos y preparaciones favoritas</p>
+        </div>
 
-      <button id="btnNuevaReceta" style="width: auto; padding: 10px 18px; margin: 0; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">
-        <span>+</span> Añadir receta
-      </button>
-    </div>
+        <button id="btnNuevaReceta" style="width: auto; padding: 8px 16px; margin: 0; border-radius: 10px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 16px;">+</span> Añadir receta
+        </button>
+  </div>
 
-    <div style="position: relative; width: 100%; margin-bottom: 24px;">
-      <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none;">
-        ${searchSVG}
+    <div style="position: relative; width: 100%; margin-bottom: 20px;">
+      <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none; color: var(--text-muted);">
+        ${icons.search}
       </div>
-      <input type="text" id="inputBuscar" placeholder="Buscar por nombre o ingrediente..." style="padding-left: 42px; margin-top: 0; height: 46px; border-radius: 14px;" />
+      <input type="text" id="inputBuscar" placeholder="Buscar por nombre o ingrediente..." style="padding-left: 42px; margin-top: 0; height: 42px; border-radius: 12px; font-size: 14px;" />
     </div>
 
     <!-- FORMULARIO CREAR Y EDITAR -->
-    <div id="modalFormReceta" class="card hidden" style="margin-bottom: 28px; border: 2px solid var(--primary-light);">
-      <h3 id="formTitle" style="margin-top: 0; margin-bottom: 16px; font-weight: 800; color: var(--primary);">Crear Nueva Receta</h3>
+    <div id="modalFormReceta" class="card hidden" style="margin-bottom: 24px; border: 2px solid var(--primary-light);">
+      <h3 id="formTitle" style="margin-top: 0; margin-bottom: 14px; font-weight: 800; color: var(--primary); font-size: 16px;">Crear Nueva Receta</h3>
       
       <form id="formReceta" style="display: flex; flex-direction: column; gap: 12px;">
         <div>
           <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Nombre de la receta *</label>
           <input type="text" id="recetaNombre" placeholder="Ej: Pollo al curry con arroz" required />
+        </div>
+
+        <!-- VISIBILIDAD PÚBLICA / PRIVADA -->
+        <div style="padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: var(--text-main);">
+            <input type="checkbox" id="chkEsPublica" style="width: 18px; height: 18px; accent-color: var(--primary); margin:0;" />
+            <span>🌐 Hacer pública esta receta para la comunidad</span>
+          </label>
+          <p style="margin: 4px 0 0 28px; font-size: 11px; color: var(--text-muted);">Tus seguidores podrán verla e importarla a su perfil.</p>
         </div>
 
         <!-- SELECCIÓN DE MOMENTO DEL DÍA -->
@@ -70,7 +79,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         </div>
 
         <div id="previewContainer" class="hidden" style="text-align: center; margin-top: 4px;">
-          <img id="imgPreview" src="" alt="Vista previa" style="max-height: 120px; border-radius: 12px; border: 1px solid var(--border);" />
+          <img id="imgPreview" src="" alt="Vista previa" style="max-height: 100px; border-radius: 10px; border: 1px solid var(--border);" />
         </div>
 
         <div>
@@ -86,17 +95,18 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         <p id="formErrorMsg" style="color: var(--danger); font-size: 13px; font-weight: 600; margin: 0; display: none;"></p>
 
         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px;">
-          <button type="button" id="btnCancelarForm" class="btn-outline" style="width: auto; margin:0; padding: 10px 18px;">Cancelar</button>
-          <button type="submit" id="btnSubmitReceta" style="width: auto; margin:0; padding: 10px 22px;">Guardar Receta</button>
+          <button type="button" id="btnCancelarForm" class="btn-outline" style="width: auto; margin:0; padding: 8px 16px;">Cancelar</button>
+          <button type="submit" id="btnSubmitReceta" style="width: auto; margin:0; padding: 8px 18px;">Guardar Receta</button>
         </div>
       </form>
     </div>
 
-    <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;"></div>
+    <!-- TARJETAS COMPACTAS Y MÁS PEQUEÑAS (minmax de 200px) -->
+    <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;"></div>
 
     <div id="modalDetalleReceta" class="sidebar-overlay">
-      <div class="card modal-dialog-content" style="max-width: 520px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 24px; position: relative;">
-        <button id="btnCloseDetalle" style="position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 16px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
+      <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
+        <button id="btnCloseDetalle" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
         <div id="contenidoDetalle"></div>
       </div>
     </div>
@@ -116,6 +126,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const inputUrl = container.querySelector('#recetaImagenUrl');
   const previewContainer = container.querySelector('#previewContainer');
   const imgPreview = container.querySelector('#imgPreview');
+  const chkEsPublica = container.querySelector('#chkEsPublica');
 
   const modalDetalle = container.querySelector('#modalDetalleReceta');
   const contenidoDetalle = container.querySelector('#contenidoDetalle');
@@ -150,6 +161,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     formReceta.reset();
     recetaEditandoId = null;
     imagenBase64 = null;
+    chkEsPublica.checked = false;
     formTitle.innerText = "Crear Nueva Receta";
     btnSubmit.innerText = "Guardar Receta";
     previewContainer.classList.add('hidden');
@@ -172,26 +184,35 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     grid.innerHTML = '';
 
     if (filtradas.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-muted);"><div style="font-size: 40px; margin-bottom: 10px;">🍲</div><p style="margin: 0; font-size: 15px; font-weight: 600;">No se encontraron recetas.</p></div>`;
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas.</p></div>`;
       return;
     }
 
     filtradas.forEach(r => {
       const card = document.createElement('div');
       card.className = 'card';
-      card.style.cssText = 'padding: 16px; border-radius: 18px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s;';
+      card.style.cssText = 'padding: 12px; border-radius: 14px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s;';
 
-      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 12px;" />` : `<div style="width: 100%; height: 100px; background: var(--primary-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 12px;">👨‍🍳</div>`;
+      const imgHtml = r.imagen_url 
+        ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` 
+        : `<div style="width: 100%; height: 80px; background: var(--primary-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 8px;">${icons.recetas}</div>`;
+
+      const badgeVisibilidad = r.es_publica 
+        ? `<span style="font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; margin-bottom: 4px;">${icons.globe} Pública</span>`
+        : `<span style="font-size: 10px; font-weight: 800; color: var(--text-muted); background: var(--input-bg); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; margin-bottom: 4px;">${icons.lock} Privada</span>`;
 
       card.innerHTML = `
         <div class="card-click-area">
           ${imgHtml}
-          <h3 style="margin: 0 0 6px 0; font-size: 17px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text-muted); font-weight: 600;">⏱️ ${r.tiempo_preparacion || 15} min • ${r.categorias || 'Comida'}</p>
+          ${badgeVisibilidad}
+          <h3 style="margin: 2px 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.2;">${r.nombre}</h3>
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+            ${icons.time} ${r.tiempo_preparacion || 15} min • ${r.categorias || 'Comida'}
+          </p>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-          <button class="btn-edit-receta btn-outline" style="width: auto; padding: 6px 12px; margin: 0; border-radius: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;" data-id="${r.id}">${editSVG} Editar</button>
-          <button class="btn-delete-receta btn-outline" style="width: auto; padding: 6px 12px; margin: 0; border-radius: 8px; font-size: 12px; color: var(--danger); display: inline-flex; align-items: center; gap: 5px;" data-id="${r.id}">${trashSVG} Eliminar</button>
+        <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px;">
+          <button class="btn-edit-receta btn-outline" style="width: auto; padding: 4px 8px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" data-id="${r.id}">${icons.edit} Editar</button>
+          <button class="btn-delete-receta btn-outline" style="width: auto; padding: 4px 8px; margin: 0; border-radius: 6px; font-size: 11px; color: var(--danger); display: inline-flex; align-items: center; gap: 4px;" data-id="${r.id}">${icons.trash} Eliminar</button>
         </div>
       `;
 
@@ -216,6 +237,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     container.querySelector('#recetaTiempo').value = r.tiempo_preparacion || 15;
     container.querySelector('#recetaIngredientes').value = r.ingredientes || '';
     container.querySelector('#recetaPasos').value = r.pasos || '';
+    chkEsPublica.checked = !!r.es_publica;
 
     const catsGuardadas = (r.categorias || '').split(',');
     container.querySelectorAll('.chk-cat').forEach(chk => {
@@ -233,27 +255,34 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     modalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function abrirDetalleReceta(r) {
-    const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 240px; object-fit: cover; border-radius: 16px; margin-bottom: 16px;" />` : '';
-    const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 6px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 13px;">Sin ingredientes.</p>';
-    const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 8px; line-height: 1.5;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 13px;">Sin pasos.</p>';
+function abrirDetalleReceta(r) {
+    const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+    const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes.</p>';
+    const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin pasos.</p>';
+
+    const estadoTexto = r.es_publica ? `${icons.globe} Receta pública (visible para la comunidad)` : `${icons.lock} Receta privada`;
 
     contenidoDetalle.innerHTML = `
       ${imgHtml}
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px;">
-        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; border-radius: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">${editSVG} Editar</button>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+        <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${icons.edit} Editar</button>
       </div>
-      <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 20px;">⏱️ ${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</div>
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">${icons.time} ${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</div>
+      <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">${estadoTexto}</div>
 
-      <div style="margin-bottom: 20px;">
-        <h4 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 6px;">🛒 Ingredientes</h4>
-        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: var(--text-main);">${ingredientesHtml}</ul>
+      <div style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.cart} Ingredientes
+        </h4>
+        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-main);">${ingredientesHtml}</ul>
       </div>
 
       <div>
-        <h4 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 6px;">👨‍🍳 Pasos</h4>
-        <div style="font-size: 14px; color: var(--text-main);">${pasosHtml}</div>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.chef} Pasos
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main);">${pasosHtml}</div>
       </div>
     `;
 
@@ -277,6 +306,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       const finalImagenUrl = imagenBase64 || urlEscrita || null;
       const ingredientes = container.querySelector('#recetaIngredientes').value.trim();
       const pasos = container.querySelector('#recetaPasos').value.trim();
+      const es_publica = chkEsPublica.checked;
 
       const seleccionadas = [];
       container.querySelectorAll('.chk-cat:checked').forEach(c => seleccionadas.push(c.value));
@@ -289,7 +319,8 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         imagen_url: finalImagenUrl,
         ingredientes,
         pasos,
-        categorias: categoriasStr
+        categorias: categoriasStr,
+        es_publica
       };
 
       if (recetaEditandoId) {

@@ -1,37 +1,20 @@
 import { supabase } from '../supabase.js';
+import { icons } from '../icons.js';
 
 export function renderPlanView(usuarioActual) {
   const container = document.createElement('div');
-
-  const bookSVG = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-    </svg>
-  `;
-
-  const searchSVG = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"></circle>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </svg>
-  `;
-
-  const trashSVG = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-    </svg>
-  `;
-
-  const sparklerSVG = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"></path>
-    </svg>
-  `;
+  container.className = 'container';
 
   let cacheMisRecetas = null;
   let cacheCatalogo = null;
+
+  // FUNCIÓN SEGURA PARA OBTENER YYYY-MM-DD EN HORA LOCAL
+  function formatIsoLocal(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   let fechaActual = new Date();
 
@@ -50,12 +33,14 @@ export function renderPlanView(usuarioActual) {
     const nombresMesesCompletos = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const nombresMesesCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
+    const hoyIso = formatIsoLocal(new Date());
+
     const dias = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(lunes);
       d.setDate(lunes.getDate() + i);
-      const isoDate = d.toISOString().split('T')[0];
-      const esHoy = new Date().toISOString().split('T')[0] === isoDate;
+      const isoDate = formatIsoLocal(d);
+      const esHoy = hoyIso === isoDate;
 
       dias.push({
         iso: isoDate,
@@ -76,31 +61,38 @@ export function renderPlanView(usuarioActual) {
   let tipoComidaSeleccionado = 'Desayuno';
 
   container.innerHTML = `
+    <!-- CABECERA UNIFICADA DE LA PÁGINA -->
+    <div style="margin-bottom: 20px;">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+        <span style="display: flex; align-items: center; color: var(--primary);">${icons.plan}</span>
+        <span>Plan Semanal</span>
+      </h1>
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Organiza tus menús diarios de la semana de forma rápida</p>
+    </div>
+
     <div class="plan-grid-wrapper">
       <div>
+        <!-- CABECERA DE CONTROL DE FECHA Y ACCIONES -->
         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="font-size: 18px; color: var(--primary);">📅</span>
-              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary);" id="textMesAnio">
-                ${diaSeleccionadoObj.mesNombre} ${diaSeleccionadoObj.anio}
-              </h1>
-            </div>
-            <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text-main);" id="titleDiaActual">
+            <h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 800; color: var(--primary);" id="textMesAnio">
+              ${diaSeleccionadoObj.mesNombre} ${diaSeleccionadoObj.anio}
+            </h2>
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--text-main);" id="titleDiaActual">
               ${diaSeleccionadoObj.nombreLargo}
             </h3>
           </div>
 
           <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="btnAutoPlan" class="btn-primary" style="width: auto; margin:0; padding: 7px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: var(--primary-gradient); box-shadow: var(--shadow);">
-              ${sparklerSVG} Generar Menú Diario
+            <button id="btnAutoPlan" class="btn-primary" style="width: auto; margin:0; padding: 7px 14px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow);">
+              ${icons.settings} Generar Menú Diario
             </button>
-            <button id="btnLimpiarPlan" class="btn-outline" style="width: auto; margin:0; padding: 7px 12px; font-size: 13px; color: var(--danger);" title="Vaciar día actual">
-              ${trashSVG} Limpiar Día
+            <button id="btnLimpiarPlan" class="btn-outline" style="width: auto; margin:0; padding: 7px 12px; font-size: 12px; color: var(--danger); display: inline-flex; align-items: center; gap: 4px;" title="Vaciar día actual">
+              ${icons.trash} Limpiar Día
             </button>
-            <button id="btnSemanaAnterior" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 13px;">◀</button>
-            <button id="btnHoy" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 13px; font-weight: 600;">Hoy</button>
-            <button id="btnSemanaSiguiente" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 13px;">▶</button>
+            <button id="btnSemanaAnterior" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px;">◀</button>
+            <button id="btnHoy" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px; font-weight: 700;">Hoy</button>
+            <button id="btnSemanaSiguiente" class="btn-outline" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px;">▶</button>
           </div>
         </div>
 
@@ -108,7 +100,8 @@ export function renderPlanView(usuarioActual) {
         <div id="listaComidasPlan">Cargando menú...</div>
       </div>
 
-      <div class="card" style="padding: 18px; border-radius: 20px;">
+      <!-- MINI CALENDARIO -->
+      <div class="card" style="padding: 18px; border-radius: 20px; position: sticky; top: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <h4 style="margin: 0; font-size: 15px; font-weight: 700;" id="miniCalTitle">Calendario</h4>
           <div style="display: flex; gap: 4px;">
@@ -127,10 +120,10 @@ export function renderPlanView(usuarioActual) {
 
     <!-- MODAL SELECCIÓN DE RECETA -->
     <div id="modalSelectReceta" class="sidebar-overlay">
-      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto;">
+      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; font-size: 18px; color: var(--primary);">Mis Recetas</h3>
-          <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">${icons.recetas} Mis Recetas</h3>
+          <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
         </div>
         <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
@@ -140,11 +133,13 @@ export function renderPlanView(usuarioActual) {
     <div id="modalSearchAlimento" class="sidebar-overlay">
       <div class="card" style="max-width: 480px; width: 92%; margin: 50px auto; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 18px; color: var(--primary); font-weight: 800;">🔍 Buscar Alimento o Comida</h3>
-          <button id="btnCloseModalSearch" style="width: auto; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
+          <h3 style="margin: 0; font-size: 16px; color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 6px;">
+            ${icons.search} Buscar Alimento o Comida
+          </h3>
+          <button id="btnCloseModalSearch" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
         </div>
 
-        <input type="text" id="inputSearchAlimento" placeholder="Empieza a escribir (ej: 'Açai', 'Pasta')..." style="margin-top: 0; margin-bottom: 10px; height: 44px;" />
+        <input type="text" id="inputSearchAlimento" placeholder="Empieza a escribir (ej: 'Açai', 'Pasta')..." style="margin-top: 0; margin-bottom: 10px; height: 42px;" />
 
         <div id="listadoSugerencias" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; flex: 1;"></div>
       </div>
@@ -207,7 +202,7 @@ export function renderPlanView(usuarioActual) {
     if (startDay === -1) startDay = 6;
 
     const totalDias = ultimoDiaMes.getDate();
-    const hoyIso = new Date().toISOString().split('T')[0];
+    const hoyIso = formatIsoLocal(new Date());
 
     grid.innerHTML = '';
 
@@ -217,7 +212,7 @@ export function renderPlanView(usuarioActual) {
 
     for (let d = 1; d <= totalDias; d++) {
       const fechaIter = new Date(anio, mes, d);
-      const isoIter = fechaIter.toISOString().split('T')[0];
+      const isoIter = formatIsoLocal(fechaIter);
 
       const esHoy = isoIter === hoyIso;
       const esSeleccionado = isoIter === diaSeleccionadoObj.iso;
@@ -341,7 +336,7 @@ export function renderPlanView(usuarioActual) {
 
           const imgBadgeHtml = imgUrl 
             ? `<img src="${imgUrl}" style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover;" />`
-            : `<div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 20px;">👨‍🍳</div>`;
+            : `<div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; color: var(--primary);">${icons.chef}</div>`;
 
           return `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--input-bg); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border);">
@@ -349,10 +344,12 @@ export function renderPlanView(usuarioActual) {
                 ${imgBadgeHtml}
                 <div>
                   <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${texto}</div>
-                  <div style="font-size: 11px; color: var(--text-muted);">${recetaAsignada ? `⏱️ ${recetaAsignada.tiempo_preparacion || 15} min` : 'Alimento rápido'}</div>
+                  <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                    ${recetaAsignada ? `${icons.time}${recetaAsignada.tiempo_preparacion || 15} min` : 'Alimento rápido'}
+                  </div>
                 </div>
               </div>
-              <button class="btn-delete-subitem btn-outline" data-id="${asig.id}" style="width: 28px; height: 28px; padding:0; margin:0; border-radius: 6px; color: var(--danger); display: inline-flex; align-items: center; justify-content: center;">${trashSVG}</button>
+              <button class="btn-delete-subitem btn-outline" data-id="${asig.id}" style="width: 28px; height: 28px; padding:0; margin:0; border-radius: 6px; color: var(--danger); display: inline-flex; align-items: center; justify-content: center;">${icons.trash}</button>
             </div>
           `;
         }).join('');
@@ -363,11 +360,11 @@ export function renderPlanView(usuarioActual) {
           <span class="meal-badge" style="margin:0;">${tipo.label}</span>
           
           <div style="display: flex; gap: 6px;">
-            <button type="button" class="btn-add-receta btn-outline" style="width: auto; padding: 5px 10px; margin: 0; font-size: 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;">
-              ${bookSVG} + Receta
+            <button type="button" class="btn-add-receta btn-outline" style="width: auto; padding: 5px 10px; margin: 0; font-size: 11px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;">
+              ${icons.recetas} + Receta
             </button>
-            <button type="button" class="btn-add-alimento btn-outline" style="width: auto; padding: 5px 10px; margin: 0; font-size: 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;">
-              ${searchSVG} + Alimento
+            <button type="button" class="btn-add-alimento btn-outline" style="width: auto; padding: 5px 10px; margin: 0; font-size: 11px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;">
+              ${icons.search} + Alimento
             </button>
           </div>
         </div>
@@ -385,7 +382,7 @@ export function renderPlanView(usuarioActual) {
         listado.innerHTML = '';
 
         if (!misRecetas || misRecetas.length === 0) {
-          listado.innerHTML = `<p style="text-align:center; color: var(--text-muted); font-size:14px; padding: 20px 0;">No tienes recetas aún.</p>`;
+          listado.innerHTML = `<p style="text-align:center; color: var(--text-muted); font-size:13px; padding: 20px 0;">No tienes recetas aún.</p>`;
         } else {
           misRecetas.forEach(r => {
             const item = document.createElement('div');
@@ -394,9 +391,9 @@ export function renderPlanView(usuarioActual) {
             item.innerHTML = `
               <div>
                 <div style="font-weight: 700; font-size: 14px;">${r.nombre}</div>
-                <div style="font-size: 11px; color: var(--text-muted);">⏱️ ${r.tiempo_preparacion || 15} min</div>
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min</div>
               </div>
-              <span style="color: var(--primary); font-size: 18px;">+</span>
+              <span style="color: var(--primary); font-size: 18px; font-weight: 800;">+</span>
             `;
 
             item.addEventListener('click', async () => {
@@ -436,7 +433,7 @@ export function renderPlanView(usuarioActual) {
           if (q.length > 0) {
             const itemCustom = document.createElement('div');
             itemCustom.className = 'card';
-            itemCustom.style.cssText = 'padding: 10px 14px; cursor: pointer; border: 1px solid var(--primary); background: var(--primary-light); font-weight: 700; color: var(--primary); font-size: 14px; display: flex; align-items: center; gap: 8px;';
+            itemCustom.style.cssText = 'padding: 10px 14px; cursor: pointer; border: 1px solid var(--primary); background: var(--primary-light); font-weight: 700; color: var(--primary); font-size: 13px; display: flex; align-items: center; gap: 8px;';
             itemCustom.innerHTML = `<span>+</span> <span>Añadir "${q}"</span>`;
             itemCustom.addEventListener('click', async () => await guardarYSeleccionarAlimento(q));
             listado.appendChild(itemCustom);
@@ -446,11 +443,11 @@ export function renderPlanView(usuarioActual) {
             sugerencias.forEach(itemObj => {
               const item = document.createElement('div');
               item.className = 'card';
-              item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); font-size: 14px; font-weight: 600;';
+              item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); font-size: 13px; font-weight: 600;';
               
               const imgHtml = itemObj.imagen_url 
                 ? `<img src="${itemObj.imagen_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />`
-                : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 16px;">👨‍🍳</div>`;
+                : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; color: var(--primary);">${icons.chef}</div>`;
 
               item.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -460,7 +457,7 @@ export function renderPlanView(usuarioActual) {
                     <div style="font-size: 10px; color: var(--text-muted);">${itemObj.categoria || 'Alimento'}</div>
                   </div>
                 </div>
-                <span style="color: var(--primary); font-size: 16px;">+</span>
+                <span style="color: var(--primary); font-size: 16px; font-weight: 800;">+</span>
               `;
 
               item.addEventListener('click', async () => await guardarYSeleccionarAlimento(itemObj.nombre, itemObj.imagen_url));
@@ -514,7 +511,6 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
-  // GENERAR MENÚ SOLO PARA EL DÍA SELECCIONADO
   function iniciarGeneracionMenuDiario() {
     pedirConfirmacion(
       `Generar Menú para el ${diaSeleccionadoObj.nombreLargo}`,
@@ -538,12 +534,10 @@ export function renderPlanView(usuarioActual) {
           let asignadosHoy = [];
 
           for (const tipo of tiposComida) {
-            // Filtrar recetas aptas que encajen en el tipo de comida y no se hayan asignado hoy
             const aptas = (cacheMisRecetas || []).filter(r => 
               (r.categorias || '').includes(tipo) && !asignadosHoy.includes(r.id)
             );
 
-            // Comprobar si ya existe asignación en este día para ese tipo de comida
             const { data: existe } = await supabase
               .from('plan_semanal')
               .select('id')
@@ -564,7 +558,6 @@ export function renderPlanView(usuarioActual) {
                   nota_personalizada: null
                 }]);
               } else {
-                // Usar catálogo de respaldo
                 const deCat = (cacheCatalogo || []).filter(c => c.categoria === tipo).map(c => c.nombre);
                 const disponibles = deCat.filter(o => !asignadosHoy.includes(o));
                 const alimentoElegido = disponibles.length > 0 ? mezclar(disponibles)[0] : (deCat.length > 0 ? mezclar(deCat)[0] : 'Comida rápida');
@@ -587,13 +580,12 @@ export function renderPlanView(usuarioActual) {
           console.error("Error al generar menú diario:", err);
         } finally {
           btnAuto.disabled = false;
-          btnAuto.innerHTML = `${sparklerSVG} Generar Menú Diario`;
+          btnAuto.innerHTML = `${icons.settings} Generar Menú Diario`;
         }
       }
     );
   }
 
-  // VACIAR ÚNICAMENTE EL DÍA SELECCIONADO
   function iniciarLimpiezaMenuDiario() {
     pedirConfirmacion(
       "Vaciar Día",

@@ -158,20 +158,21 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
+/* CONTENEDOR PRINCIPAL FIX */
 .layout-container {
   display: flex;
-  min-height: 100vh;
-  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow: hidden !important;
 }
 
+/* SIDEBAR RESTRUCTURADA Y COLAPSABLE */
 .sidebar {
   width: 250px;
   height: 100vh;
   height: 100dvh;
-  position: sticky;
-  top: 0;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   padding: 20px 16px;
@@ -179,9 +180,23 @@ button:hover { background-color: var(--primary-hover); }
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  transition: transform 0.3s ease;
   z-index: 1001;
-  overflow-y: auto;
+  overflow: hidden;
+  transition: width 0.3s ease, padding 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.brand-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -189,15 +204,73 @@ button:hover { background-color: var(--primary-hover); }
   font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin: 0;
   color: var(--primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* BOTÓN PARA COLAPSAR EN ESCRITORIO */
+.sidebar-collapse-btn {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* ESTADO COLAPSADO (SOLO ICONOS) */
+.sidebar.collapsed {
+  width: 72px;
+  padding: 20px 10px;
+}
+
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* OCULTA TODO EL BLOQUE DEL TITULO E ICONO AL COLAPSAR */
+.sidebar.collapsed .brand-title,
+.sidebar.collapsed .nav-item-text,
+.sidebar.collapsed .user-email-text {
+  display: none !important;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar.collapsed .user-profile-sidebar {
+  text-align: center;
+}
+
+.sidebar.collapsed .sidebar-collapse-btn svg {
+  transform: rotate(180deg);
 }
 
 .sidebar-menu {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .nav-item {
@@ -215,6 +288,7 @@ button:hover { background-color: var(--primary-hover); }
   text-align: left;
   width: 100%;
   margin-top: 0;
+  white-space: nowrap;
 }
 
 .nav-item:hover, .nav-item.active {
@@ -225,25 +299,29 @@ button:hover { background-color: var(--primary-hover); }
 .nav-item.active { font-weight: 700; }
 
 .user-profile-sidebar {
-  margin-top: 20px;
+  margin-top: auto !important;
   border-top: 1px solid var(--border);
   padding-top: 14px;
+  background-color: var(--sidebar-bg);
 }
 
+/* ZONA DE CONTENIDO PRINCIPAL */
 .main-content {
   flex: 1;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto !important;
   padding: 28px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }
 
-/* CENTRADO VERTICAL DEL CALENDARIO EN ESCRITORIO */
 .plan-grid-wrapper {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 24px;
-  align-items: center; /* Centra el calendario verticalmente */
+  align-items: start !important;
   width: 100%;
 }
 
