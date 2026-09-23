@@ -110,12 +110,12 @@ export function renderPerfilView(usuarioActual) {
 
           <div>
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Nombre de Usuario (@username)</label>
-            <input type="text" id="inputUsername" placeholder="ej: marina_yague" required style="text-transform: lowercase; margin-top: 4px;" />
+            <input type="text" id="inputUsername" placeholder="" required style="text-transform: lowercase; margin-top: 4px;" />
           </div>
 
           <div>
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Nombre Completo</label>
-            <input type="text" id="inputNombreCompleto" placeholder="ej: Marina Yagüe" style="margin-top: 4px;" />
+            <input type="text" id="inputNombreCompleto" placeholder="" style="margin-top: 4px;" />
           </div>
 
           <div style="margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--border);">
@@ -164,14 +164,36 @@ export function renderPerfilView(usuarioActual) {
         </form>
       </div>
     </div>
+
+    <!-- MODAL CONFIRMACIÓN DE ELIMINACIÓN DE CUENTA (FORMAL) -->
+    <div id="modalConfirmarEliminar" class="sidebar-overlay">
+      <div class="card" style="max-width: 400px; width: 90%; margin: 100px auto; padding: 24px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: #fee2e2; color: var(--danger); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">¿Eliminar tu cuenta?</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+          Esta acción eliminará de forma permanente tus recetas, notificaciones, interacciones sociales y tu acceso a <strong>BiteLife</strong>.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="btnCancelarEliminarModal" class="btn-outline" style="width: 50%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px;">Cancelar</button>
+          <button id="btnConfirmarEliminarModal" class="btn-primary" style="width: 50%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px; background: var(--danger); border-color: var(--danger);">Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
   `;
 
   setTimeout(() => {
     const modalEditar = container.querySelector('#modalEditarPerfil');
+    const modalEliminar = container.querySelector('#modalConfirmarEliminar');
+    
     const btnAbrirModal = container.querySelector('#btnAbrirModalEditar');
     const btnCloseModal = container.querySelector('#btnCloseModalEditar');
     const btnCancelarModal = container.querySelector('#btnCancelarModal');
+    
     const btnEliminarCuenta = container.querySelector('#btnEliminarCuenta');
+    const btnCancelarEliminar = container.querySelector('#btnCancelarEliminarModal');
+    const btnConfirmarEliminar = container.querySelector('#btnConfirmarEliminarModal');
 
     const btnToggleSeccionPass = container.querySelector('#btnToggleSeccionPass');
     const secCambiarPassword = container.querySelector('#secCambiarPassword');
@@ -246,21 +268,32 @@ export function renderPerfilView(usuarioActual) {
     btnCancelarModal.addEventListener('click', cerrarModalAjustes);
     modalEditar.addEventListener('click', (e) => { if (e.target === modalEditar) cerrarModalAjustes(); });
 
-    btnEliminarCuenta.addEventListener('click', async () => {
-      const confirmacion = confirm('¿Estás seguro/a de que deseas eliminar tu cuenta?\n\nEsta acción eliminará de forma permanente todas tus recetas, notificaciones, perfil y tu acceso a BiteLife.');
+    // ABRIR Y CANCELAR MODAL DE ELIMINAR CUENTA
+    btnEliminarCuenta.addEventListener('click', () => {
+      modalEliminar.classList.add('visible');
+    });
 
-      if (!confirmacion) return;
+    btnCancelarEliminar.addEventListener('click', () => {
+      modalEliminar.classList.remove('visible');
+    });
 
-      btnEliminarCuenta.disabled = true;
-      btnEliminarCuenta.innerHTML = '<span>Eliminando...</span>';
+    modalEliminar.addEventListener('click', (e) => {
+      if (e.target === modalEliminar) modalEliminar.classList.remove('visible');
+    });
+
+    // EJECUTAR ELIMINACIÓN
+    btnConfirmarEliminar.addEventListener('click', async () => {
+      btnConfirmarEliminar.disabled = true;
+      btnConfirmarEliminar.innerText = 'Eliminando...';
 
       try {
         const { error: rpcErr } = await supabase.rpc('borrar_cuenta_usuario');
 
         if (rpcErr) {
           alert('Error al eliminar la cuenta: ' + rpcErr.message);
-          btnEliminarCuenta.disabled = false;
-          btnEliminarCuenta.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>Eliminar cuenta</span>';
+          btnConfirmarEliminar.disabled = false;
+          btnConfirmarEliminar.innerText = 'Sí, eliminar';
+          modalEliminar.classList.remove('visible');
           return;
         }
 
@@ -269,8 +302,9 @@ export function renderPerfilView(usuarioActual) {
 
       } catch (err) {
         alert('Error inesperado: ' + err.message);
-        btnEliminarCuenta.disabled = false;
-        btnEliminarCuenta.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>Eliminar cuenta</span>';
+        btnConfirmarEliminar.disabled = false;
+        btnConfirmarEliminar.innerText = 'Sí, eliminar';
+        modalEliminar.classList.remove('visible');
       }
     });
 

@@ -121,10 +121,10 @@ export function renderAuthView(onLoginSuccess) {
       const password = inputPassword.value;
 
       if (esRegistro) {
-        const username = inputRegUsername.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-        const nombreCompleto = inputRegNombre.value.trim();
+        const usernameLimpio = inputRegUsername.value.trim().toLowerCase().replace('@', '').replace(/[^a-z0-9_]/g, '');
+        const nombreCompletoLimpio = inputRegNombre.value.trim();
 
-        if (!username) {
+        if (!usernameLimpio) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
@@ -146,14 +146,15 @@ export function renderAuthView(onLoginSuccess) {
 
         const redirectUrl = window.location.origin;
 
+        // Registrar pasando la metadata completa a Supabase Auth
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: redirectUrl,
             data: {
-              username: username,
-              nombre_completo: nombreCompleto || username
+              username: usernameLimpio,
+              nombre_completo: nombreCompletoLimpio || usernameLimpio
             }
           }
         });
@@ -162,17 +163,24 @@ export function renderAuthView(onLoginSuccess) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = 'Error: ' + authErr.message;
+          
+          if (authErr.message.includes('rate limit')) {
+            msg.innerText = 'Has realizado demasiados intentos en poco tiempo. Por favor, espera unos minutos.';
+          } else {
+            msg.innerText = 'Error: ' + authErr.message;
+          }
+
           btnSubmit.disabled = false;
           btnSubmit.innerText = 'Registrarse';
           return;
         }
 
         if (authData.user) {
+          // Asegurar que el registro en la tabla pública tenga los datos exactos
           await supabase.from('perfiles').upsert({
             id: authData.user.id,
-            username: username,
-            nombre_completo: nombreCompleto || username
+            username: usernameLimpio,
+            nombre_completo: nombreCompletoLimpio || usernameLimpio
           });
 
           msg.style.display = 'block';

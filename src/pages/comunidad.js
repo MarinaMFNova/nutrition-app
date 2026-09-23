@@ -1,305 +1,212 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
-export function renderComunidadView(usuarioActual) {
+export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const container = document.createElement('div');
   container.className = 'container';
 
   container.innerHTML = `
-    <!-- CABECERA -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <!-- CABECERA DE LA PÁGINA -->
+    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
       <div>
-        <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 8px;">
-          <span style="display: flex; align-items: center; color: var(--primary);">${icons.feed}</span>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+          <span style="display: flex; align-items: center; color: var(--primary);">${icons.compass || icons.globe}</span>
           <span>Feed de la Comunidad</span>
         </h1>
-        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-muted);">Descubre las recetas de los cocineros que sigues e impórtalas a tu plan</p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Descubre las recetas de los cocineros que sigues e impórtalas a tu plan</p>
       </div>
 
-      <!-- BUSCADOR CON SUGERENCIAS DE USUARIOS -->
-      <div style="position: relative; min-width: 260px;">
-        <div style="position: relative; display: flex; align-items: center;">
-          <input type="text" id="inputBuscarFeed" placeholder="Buscar receta o @usuario..." style="width: 100%; height: 36px; padding-left: 34px; margin: 0; font-size: 12px;" />
-          <span style="position: absolute; left: 10px; color: var(--text-muted); pointer-events: none; display: flex;">${icons.search}</span>
-        </div>
-        <div id="boxResultadosUsuarios" style="position: absolute; top: 42px; left: 0; right: 0; background: var(--bg-card, #ffffff); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); z-index: 100; max-height: 250px; overflow-y: auto; display: none;"></div>
+      <!-- BUSCADOR -->
+      <div style="position: relative; width: 100%; max-width: 320px;">
+        <input type="text" id="inputBuscarFeed" placeholder="Buscar receta o @usuario..." style="width: 100%; padding-left: 38px; height: 40px; border-radius: 20px; margin: 0; box-sizing: border-box; border: 1px solid var(--border);" />
+        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; align-items: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
       </div>
     </div>
 
-    <!-- GRID DE RECETAS PÚBLICAS -->
-    <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
-      Cargando recetas de la comunidad...
+    <!-- REJILLA CON TAMAÑO COMPACTO CONTROLADO -->
+    <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 230px)); gap: 18px;">
+      Cargando publicaciones...
+    </div>
+
+    <!-- MODAL FORMAL DE NOTIFICACIÓN -->
+    <div id="modalNotificacionFeed" class="sidebar-overlay">
+      <div class="card" style="max-width: 380px; width: 90%; margin: 120px auto; padding: 24px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+        <div id="feedModalIcon" style="width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+          ${icons.check || '✓'}
+        </div>
+        <h3 id="feedModalTitle" style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">¡Receta Importada!</h3>
+        <p id="feedModalMsg" style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+          La receta se ha añadido correctamente a tus recetas guardadas.
+        </p>
+        <button id="btnCerrarModalFeed" class="btn-primary" style="width: 100%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px;">Entendido</button>
+      </div>
     </div>
   `;
 
   setTimeout(() => {
-    const inputBuscar = container.querySelector('#inputBuscarFeed');
-    const boxUsuarios = container.querySelector('#boxResultadosUsuarios');
     const gridFeed = container.querySelector('#gridFeed');
+    const inputBuscar = container.querySelector('#inputBuscarFeed');
+    
+    const modalNotif = container.querySelector('#modalNotificacionFeed');
+    const modalIcon = container.querySelector('#feedModalIcon');
+    const modalTitle = container.querySelector('#feedModalTitle');
+    const modalMsg = container.querySelector('#feedModalMsg');
+    const btnCerrarModal = container.querySelector('#btnCerrarModalFeed');
 
-    let todasLasRecetas = [];
+    btnCerrarModal.addEventListener('click', () => {
+      modalNotif.classList.remove('visible');
+    });
 
-    // Cargar únicamente recetas de usuarios con seguimiento aceptado
-    async function cargarFeed() {
-      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Cargando recetas...</p>';
+    function mostrarAvisoModal(titulo, mensaje, esError = false) {
+      modalTitle.innerText = titulo;
+      modalMsg.innerText = mensaje;
 
-      // 1. Obtener los IDs de las personas a las que sigues (con estado aceptado o sin estado definido)
-      const { data: misSiguiendo } = await supabase
-        .from('seguidores')
-        .select('seguido_id')
-        .eq('seguidor_id', usuarioActual.id)
-        .or('estado.eq.aceptado,estado.is.null');
-
-      const idsPermitidos = (misSiguiendo || []).map(s => s.seguido_id);
-
-      if (idsPermitidos.length === 0) {
-        renderizarRecetas([]);
-        return;
+      if (esError) {
+        modalIcon.style.background = '#fee2e2';
+        modalIcon.style.color = 'var(--danger)';
+        modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+      } else {
+        modalIcon.style.background = 'var(--primary-light)';
+        modalIcon.style.color = 'var(--primary)';
+        modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
       }
 
-      // 2. Traer solo las recetas públicas de esos usuarios seguidos
+      modalNotif.classList.add('visible');
+    }
+
+    async function cargarPublicacionesFeed(busqueda = '') {
+      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando feed...</p>';
+
+      // Traer solo recetas públicas de OTROS usuarios (.neq en user_id)
       const { data: recetas, error } = await supabase
         .from('recetas')
         .select('*')
         .eq('es_publica', true)
-        .in('user_id', idsPermitidos)
+        .neq('user_id', usuarioActual.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 12px;">Error al cargar las recetas: ${error.message}</p>`;
+      if (error || !recetas || recetas.length === 0) {
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas de otros cocineros en la comunidad por ahora.</p>';
         return;
       }
 
-      if (!recetas || recetas.length === 0) {
-        renderizarRecetas([]);
-        return;
-      }
-
-      // 3. Traer los perfiles de los autores de esas recetas
+      // Obtener perfiles de autores
       const userIds = [...new Set(recetas.map(r => r.user_id))];
       const { data: perfiles } = await supabase.from('perfiles').select('*').in('id', userIds);
-
       const mapaPerfiles = {};
       (perfiles || []).forEach(p => { mapaPerfiles[p.id] = p; });
 
-      todasLasRecetas = recetas.map(r => ({
-        ...r,
-        perfiles: mapaPerfiles[r.user_id] || {}
-      }));
+      // Filtrar por búsqueda
+      const filtro = busqueda.toLowerCase().trim();
+      const recetasFiltradas = recetas.filter(r => {
+        const autor = mapaPerfiles[r.user_id] || {};
+        const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(filtro) : false;
+        const matchUser = autor.username ? autor.username.toLowerCase().includes(filtro) : false;
+        return matchNombre || matchUser;
+      });
 
-      renderizarRecetas(todasLasRecetas);
-    }
-
-    function renderizarRecetas(lista) {
-      if (!lista || lista.length === 0) {
-        gridFeed.innerHTML = `
-          <div class="card" style="padding: 30px; text-align: center; grid-column: 1/-1; border-radius: 16px;">
-            <h3 style="margin: 0 0 6px 0; font-size: 15px; color: var(--text-main);">No hay recetas públicas en tu feed</h3>
-            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Sigue a otros cocineros desde la barra de búsqueda superior para ver sus publicaciones aquí.</p>
-          </div>
-        `;
+      if (recetasFiltradas.length === 0) {
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas con ese término.</p>';
         return;
       }
 
-      gridFeed.innerHTML = lista.map(r => {
-        const autor = r.perfiles || {};
+      gridFeed.innerHTML = recetasFiltradas.map(r => {
+        const autor = mapaPerfiles[r.user_id] || {};
+
         return `
-          <div class="card" style="padding: 10px; border-radius: 14px; display: flex; flex-direction: column; justify-content: space-between; max-width: 240px;">
+          <div class="card" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box;">
             <div>
-              ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
+              ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
               <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                <div style="width: 22px; height: 22px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
                   ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
                 </div>
-                <span style="font-size: 11px; font-weight: 700; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autor.username || 'usuario'}</span>
+                <span style="font-size: 11px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
               </div>
 
-              <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.2;">${r.nombre}</h3>
-              <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 8px 0; display: flex; align-items: center; gap: 4px;">
-                ${icons.time} ${r.tiempo_preparacion || 15} min
+              <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
+              <p style="margin: 0 0 10px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>${r.tiempo_preparacion || 15} min</span>
               </p>
             </div>
 
-            <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 8px; font-size: 11px; font-weight: 700; border-radius: 8px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 4px; height: 32px;">
-              ${icons.recetas} Guardar en Mis Recetas
+            <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Guardar en Mis Recetas</span>
             </button>
           </div>
         `;
       }).join('');
 
+      // IMPORTACIÓN DE RECETAS CON ATRIBUCIÓN AL AUTOR ORIGINAL
       gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const recId = btn.getAttribute('data-id');
-          const recetaOriginal = todasLasRecetas.find(x => x.id === recId);
-          if (!recetaOriginal) return;
-
+          const recetaId = btn.getAttribute('data-id');
           btn.disabled = true;
           btn.innerText = 'Guardando...';
 
-          const { error } = await supabase.from('recetas').insert([{
-            user_id: usuarioActual.id,
-            nombre: recetaOriginal.nombre,
-            ingredientes: recetaOriginal.ingredientes,
-            instrucciones: recetaOriginal.instrucciones,
-            tiempo_preparacion: recetaOriginal.tiempo_preparacion,
-            imagen_url: recetaOriginal.imagen_url,
-            es_publica: false
-          }]);
+          try {
+            const { data: recetaOriginal, error: getErr } = await supabase
+              .from('recetas')
+              .select('*')
+              .eq('id', recetaId)
+              .single();
 
-          if (error) {
-            alert('Error al importar la receta.');
+            if (getErr || !recetaOriginal) {
+              mostrarAvisoModal('Error', 'No se pudo leer la información de la receta.', true);
+              btn.disabled = false;
+              btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
+              return;
+            }
+
+            // Nombre del autor original
+            const autor = mapaPerfiles[recetaOriginal.user_id] || {};
+            const nombreAutor = autor.username ? `@${autor.username}` : 'Comunidad';
+
+            const nuevaRecetaPayload = {
+              user_id: usuarioActual.id,
+              nombre: `${recetaOriginal.nombre} (de ${nombreAutor})`,
+              ingredientes: recetaOriginal.ingredientes || [],
+              pasos: recetaOriginal.pasos || [],
+              tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
+              imagen_url: recetaOriginal.imagen_url || null,
+              es_publica: false
+            };
+
+            const { error: insertErr } = await supabase
+              .from('recetas')
+              .insert([nuevaRecetaPayload]);
+
+            if (insertErr) {
+              mostrarAvisoModal('Error al importar', insertErr.message || 'Error al guardar la receta.', true);
+              btn.disabled = false;
+              btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
+              return;
+            }
+
+            mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${nombreAutor} se ha añadido a tus recetas.`);
+            btn.innerText = '¡Guardada!';
+
+            if (onRecetaImportada) onRecetaImportada();
+
+          } catch (err) {
+            mostrarAvisoModal('Error inesperado', err.message || 'Error al procesar la importación.', true);
             btn.disabled = false;
-            btn.innerText = 'Guardar en Mis Recetas';
-          } else {
-            btn.innerText = '✅ ¡Guardada!';
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
           }
         });
       });
     }
 
-    inputBuscar.addEventListener('input', async (e) => {
-      const q = e.target.value.trim().toLowerCase();
-
-      if (!q) {
-        boxUsuarios.style.display = 'none';
-        renderizarRecetas(todasLasRecetas);
-        return;
-      }
-
-      if (q.startsWith('@') || q.length >= 2) {
-        const terminoUser = q.replace('@', '');
-        
-        const { data: usuarios } = await supabase
-          .from('perfiles')
-          .select('*')
-          .neq('id', usuarioActual.id)
-          .or(`username.ilike.%${terminoUser}%,nombre_completo.ilike.%${terminoUser}%`)
-          .limit(5);
-
-        if (usuarios && usuarios.length > 0) {
-          boxUsuarios.style.display = 'block';
-          
-          const idsBusqueda = usuarios.map(u => u.id);
-          const { data: misSeguimientos } = await supabase
-            .from('seguidores')
-            .select('seguido_id, estado')
-            .eq('seguidor_id', usuarioActual.id)
-            .in('seguido_id', idsBusqueda);
-
-          const mapaEstados = {};
-          (misSeguimientos || []).forEach(s => { mapaEstados[s.seguido_id] = s.estado; });
-
-          boxUsuarios.innerHTML = usuarios.map(u => {
-            const estadoSeguimiento = mapaEstados[u.id];
-
-            let textoBoton = '+ Seguir';
-            let estiloClase = 'btn-primary';
-
-            if (estadoSeguimiento === 'pendiente') {
-              textoBoton = 'Cancelar solicitud';
-              estiloClase = 'btn-outline';
-            } else if (estadoSeguimiento === 'aceptado') {
-              textoBoton = 'Dejar de seguir';
-              estiloClase = 'btn-outline';
-            }
-
-            return `
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; overflow: hidden;">
-                    ${u.avatar_url ? `<img src="${u.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (u.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${u.nombre_completo || u.username}</div>
-                    <div style="font-size: 10px; color: var(--primary); font-weight: 700;">@${u.username}</div>
-                  </div>
-                </div>
-
-                <button class="btn-accion-seguir ${estiloClase}" data-userid="${u.id}" data-estado="${estadoSeguimiento || 'ninguno'}" style="width: auto; padding: 4px 10px; font-size: 10px; font-weight: 700; margin: 0; border-radius: 6px;">
-                  ${textoBoton}
-                </button>
-              </div>
-            `;
-          }).join('');
-
-          boxUsuarios.querySelectorAll('.btn-accion-seguir').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const destinoId = btn.getAttribute('data-userid');
-              const estadoActual = btn.getAttribute('data-estado');
-
-              btn.disabled = true;
-
-              if (estadoActual === 'pendiente' || estadoActual === 'aceptado') {
-                btn.innerText = 'Procesando...';
-
-                // 1. Borrar relación de seguimiento
-                await supabase.from('seguidores').delete().eq('seguidor_id', usuarioActual.id).eq('seguido_id', destinoId);
-
-                // 2. Borrar notificación de solicitud pendiente si existía
-                await supabase.from('notificaciones').delete().eq('emisor_id', usuarioActual.id).eq('user_id', destinoId);
-
-                btn.innerText = '+ Seguir';
-                btn.className = 'btn-accion-seguir btn-primary';
-                btn.setAttribute('data-estado', 'ninguno');
-                btn.disabled = false;
-
-                // 3. Recargar el Feed para ocultar inmediatamente sus recetas
-                cargarFeed();
-              } else {
-                btn.innerText = 'Enviando...';
-
-                // 1. Guardar o actualizar estado de seguimiento a pendiente
-                const { error: segErr } = await supabase.from('seguidores').upsert([{
-                  seguidor_id: usuarioActual.id,
-                  seguido_id: destinoId,
-                  estado: 'pendiente'
-                }]);
-
-                if (segErr) {
-                  console.error('Error al solicitar seguimiento:', segErr);
-                  btn.innerText = '+ Seguir';
-                  btn.disabled = false;
-                  return;
-                }
-
-                // 2. Generar registro explícito en notificaciones
-                await supabase.from('notificaciones').insert([{
-                  user_id: destinoId,
-                  emisor_id: usuarioActual.id,
-                  tipo: 'solicitud_seguimiento',
-                  leida: false
-                }]);
-
-                btn.innerText = 'Cancelar solicitud';
-                btn.className = 'btn-accion-seguir btn-outline';
-                btn.setAttribute('data-estado', 'pendiente');
-                btn.disabled = false;
-              }
-            });
-          });
-        } else {
-          boxUsuarios.style.display = 'none';
-        }
-      } else {
-        boxUsuarios.style.display = 'none';
-      }
-
-      const filtradas = todasLasRecetas.filter(r => 
-        r.nombre.toLowerCase().includes(q) ||
-        (r.ingredientes && r.ingredientes.toLowerCase().includes(q)) ||
-        (r.perfiles && r.perfiles.username && r.perfiles.username.toLowerCase().includes(q))
-      );
-      renderizarRecetas(filtradas);
+    inputBuscar.addEventListener('input', (e) => {
+      cargarPublicacionesFeed(e.target.value);
     });
 
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target)) {
-        boxUsuarios.style.display = 'none';
-      }
-    });
-
-    cargarFeed();
+    cargarPublicacionesFeed();
   }, 0);
 
   return container;

@@ -9,6 +9,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let busqueda = '';
   let imagenBase64 = null;
   let recetaEditandoId = null;
+  let recetaABorrarId = null;
 
   container.innerHTML = `
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
@@ -110,6 +111,23 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         <div id="contenidoDetalle"></div>
       </div>
     </div>
+
+    <!-- MODAL CONFIRMACIÓN ELIMINAR RECETA (DISEÑO FORMAL DE BITELIFE) -->
+    <div id="modalConfirmarEliminarReceta" class="sidebar-overlay">
+      <div class="card" style="max-width: 380px; width: 90%; margin: 120px auto; padding: 24px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: #fee2e2; color: var(--danger); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+          ${icons.trash || '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'}
+        </div>
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">¿Eliminar esta receta?</h3>
+        <p id="lblNombreRecetaBorrar" style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+          Esta acción quitará la receta de tu recetario personal de forma permanente.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="btnCancelarBorrarReceta" class="btn-outline" style="width: 50%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px;">Cancelar</button>
+          <button id="btnConfirmarBorrarReceta" class="btn-primary" style="width: 50%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px; background: var(--danger); border-color: var(--danger);">Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
   `;
 
   const modalForm = container.querySelector('#modalFormReceta');
@@ -131,6 +149,11 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const modalDetalle = container.querySelector('#modalDetalleReceta');
   const contenidoDetalle = container.querySelector('#contenidoDetalle');
   const btnCloseDetalle = container.querySelector('#btnCloseDetalle');
+
+  const modalBorrar = container.querySelector('#modalConfirmarEliminarReceta');
+  const lblNombreBorrar = container.querySelector('#lblNombreRecetaBorrar');
+  const btnCancelarBorrar = container.querySelector('#btnCancelarBorrarReceta');
+  const btnConfirmarBorrar = container.querySelector('#btnConfirmarBorrarReceta');
 
   if (abrirFormularioInicial) modalForm.classList.remove('hidden');
 
@@ -173,6 +196,35 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
   btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
   inputBuscar.addEventListener('input', (e) => { busqueda = e.target.value.toLowerCase(); renderGrid(); });
+
+  // EVENTOS PARA EL MODAL DE BORRADO
+  btnCancelarBorrar.addEventListener('click', () => {
+    modalBorrar.classList.remove('visible');
+    recetaABorrarId = null;
+  });
+
+  modalBorrar.addEventListener('click', (e) => {
+    if (e.target === modalBorrar) {
+      modalBorrar.classList.remove('visible');
+      recetaABorrarId = null;
+    }
+  });
+
+  btnConfirmarBorrar.addEventListener('click', async () => {
+    if (!recetaABorrarId) return;
+
+    btnConfirmarBorrar.disabled = true;
+    btnConfirmarBorrar.innerText = 'Eliminando...';
+
+    await supabase.from('recetas').delete().eq('id', recetaABorrarId);
+
+    modalBorrar.classList.remove('visible');
+    btnConfirmarBorrar.disabled = false;
+    btnConfirmarBorrar.innerText = 'Sí, eliminar';
+    recetaABorrarId = null;
+
+    cargarRecetas();
+  });
 
   async function cargarRecetas() {
     const { data, error } = await supabase.from('recetas').select('*').eq('user_id', usuarioActual.id).order('created_at', { ascending: false });
@@ -218,9 +270,11 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
       card.querySelector('.card-click-area').addEventListener('click', () => abrirDetalleReceta(r));
       card.querySelector('.btn-edit-receta').addEventListener('click', (e) => { e.stopPropagation(); abrirEdicionReceta(r); });
-      card.querySelector('.btn-delete-receta').addEventListener('click', async (e) => {
+      card.querySelector('.btn-delete-receta').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm(`¿Eliminar "${r.nombre}"?`)) { await supabase.from('recetas').delete().eq('id', r.id); cargarRecetas(); }
+        recetaABorrarId = r.id;
+        lblNombreBorrar.innerText = `¿Seguro que deseas eliminar "${r.nombre}"?`;
+        modalBorrar.classList.add('visible');
       });
 
       grid.appendChild(card);
@@ -255,7 +309,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     modalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-function abrirDetalleReceta(r) {
+  function abrirDetalleReceta(r) {
     const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
     const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes.</p>';
     const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin pasos.</p>';
