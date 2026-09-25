@@ -7,27 +7,40 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
   container.innerHTML = `
     <!-- CABECERA DE LA PÁGINA -->
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
       <div>
         <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
           <span style="display: flex; align-items: center; color: var(--primary);">${icons.compass || icons.globe}</span>
           <span>Feed de la Comunidad</span>
         </h1>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Descubre las recetas de los cocineros que sigues e impórtalas a tu plan</p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Encuentra cocineros y consulta las recetas de los usuarios que te han aceptado</p>
       </div>
 
       <!-- BUSCADOR -->
       <div style="position: relative; width: 100%; max-width: 320px;">
-        <input type="text" id="inputBuscarFeed" placeholder="Buscar receta o @usuario..." style="width: 100%; padding-left: 38px; height: 40px; border-radius: 20px; margin: 0; box-sizing: border-box; border: 1px solid var(--border);" />
+        <input type="text" id="inputBuscarFeed" placeholder="Buscar cocinero (@usuario) o receta..." style="width: 100%; padding-left: 38px; height: 40px; border-radius: 20px; margin: 0; box-sizing: border-box; border: 1px solid var(--border);" />
         <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; align-items: center;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
       </div>
     </div>
 
-    <!-- REJILLA CON TAMAÑO COMPACTO CONTROLADO -->
-    <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 230px)); gap: 18px;">
-      Cargando publicaciones...
+    <!-- SECCIÓN 1: RESULTADOS DE BÚSQUEDA DE COCINEROS -->
+    <div id="secUsuariosEncontrados" class="hidden" style="margin-bottom: 28px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+        ${icons.users || '👥'} Cocineros encontrados
+      </h3>
+      <div id="gridUsuariosEncontrados" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;"></div>
+    </div>
+
+    <!-- SECCIÓN 2: FEED DE RECETAS DE SEGUIDOS ACEPTADOS -->
+    <div id="secFeedRecetas">
+      <h3 id="tituloSeccionRecetas" style="margin: 0 0 14px 0; font-size: 15px; font-weight: 800; color: var(--text-main);">
+        Recetas de tus cocineros seguidos
+      </h3>
+      <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 230px)); gap: 18px;">
+        Cargando publicaciones...
+      </div>
     </div>
 
     <!-- MODAL FORMAL DE NOTIFICACIÓN -->
@@ -36,9 +49,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         <div id="feedModalIcon" style="width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
           ${icons.check || '✓'}
         </div>
-        <h3 id="feedModalTitle" style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">¡Receta Importada!</h3>
+        <h3 id="feedModalTitle" style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">¡Notificación!</h3>
         <p id="feedModalMsg" style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-          La receta se ha añadido correctamente a tus recetas guardadas.
+          Operación realizada con éxito.
         </p>
         <button id="btnCerrarModalFeed" class="btn-primary" style="width: 100%; margin: 0; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px;">Entendido</button>
       </div>
@@ -48,6 +61,8 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   setTimeout(() => {
     const gridFeed = container.querySelector('#gridFeed');
     const inputBuscar = container.querySelector('#inputBuscarFeed');
+    const secUsuarios = container.querySelector('#secUsuariosEncontrados');
+    const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
     
     const modalNotif = container.querySelector('#modalNotificacionFeed');
     const modalIcon = container.querySelector('#feedModalIcon');
@@ -76,44 +91,150 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       modalNotif.classList.add('visible');
     }
 
-    async function cargarPublicacionesFeed(busqueda = '') {
-      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando feed...</p>';
+    async function cargarComunidad(busqueda = '') {
+      const termino = busqueda.toLowerCase().trim().replace('@', '');
+      const hayBusqueda = termino.length > 0;
 
-      // Traer solo recetas públicas de OTROS usuarios (.neq en user_id)
-      const { data: recetas, error } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('es_publica', true)
-        .neq('user_id', usuarioActual.id)
-        .order('created_at', { ascending: false });
+      // OBTENER RELACIONES DE SEGUIMIENTO DEL USUARIO ACTUAL
+      const { data: relaciones } = await supabase
+        .from('seguidores')
+        .select('seguido_id, estado')
+        .eq('seguidor_id', usuarioActual.id);
 
-      if (error || !recetas || recetas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas de otros cocineros en la comunidad por ahora.</p>';
+      const mapaRelaciones = {};
+      (relaciones || []).forEach(rel => {
+        mapaRelaciones[rel.seguido_id] = rel.estado || 'aceptado';
+      });
+
+      const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
+
+      // ------------------------------------------------------------------
+      // A. BÚSQUEDA DE COCINEROS / PERFILES
+      // ------------------------------------------------------------------
+      if (hayBusqueda) {
+        const { data: perfilesEncontrados } = await supabase
+          .from('perfiles')
+          .select('*')
+          .neq('id', usuarioActual.id)
+          .or(`username.ilike.%${termino}%,nombre_completo.ilike.%${termino}%`);
+
+        if (perfilesEncontrados && perfilesEncontrados.length > 0) {
+          secUsuarios.classList.remove('hidden');
+          gridUsuarios.innerHTML = perfilesEncontrados.map(p => {
+            const estado = mapaRelaciones[p.id];
+
+            let btnHtml = '';
+            if (estado === 'aceptado') {
+              btnHtml = `<span style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:5px 12px; border-radius:12px;">Siguiendo</span>`;
+            } else if (estado === 'pendiente') {
+              btnHtml = `<button disabled style="padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; background:var(--input-bg); color:var(--text-muted); border:1px solid var(--border); margin:0;">Solicitado</button>`;
+            } else {
+              btnHtml = `<button class="btn-enviar-solicitud btn-primary" data-id="${p.id}" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`;
+            }
+
+            return `
+              <div class="card" style="padding:12px 14px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                  <div style="width:38px; height:38px; border-radius:50%; background:#e6f4f4; color:#2ba8a8; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; overflow:hidden; flex-shrink:0;">
+                    ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style="overflow:hidden;">
+                    <div style="font-size:13px; font-weight:800; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.nombre_completo || p.username}</div>
+                    <div style="font-size:11px; font-weight:700; color:#2ba8a8;">@${p.username}</div>
+                  </div>
+                </div>
+                <div>${btnHtml}</div>
+              </div>
+            `;
+          }).join('');
+
+          // EVENTO ENVIAR SOLICITUD
+          gridUsuarios.querySelectorAll('.btn-enviar-solicitud').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const idDestino = btn.getAttribute('data-id');
+              btn.disabled = true;
+              btn.innerText = 'Enviando...';
+
+              try {
+                await supabase.from('seguidores').insert([{
+                  seguidor_id: usuarioActual.id,
+                  seguido_id: idDestino,
+                  estado: 'pendiente'
+                }]);
+
+                await supabase.from('notificaciones').insert([{
+                  user_id: idDestino,
+                  emisor_id: usuarioActual.id,
+                  tipo: 'solicitud_seguimiento',
+                  leida: false
+                }]);
+
+                mostrarAvisoModal('Solicitud enviada', 'Se ha enviado la solicitud de seguimiento correctamente.');
+                cargarComunidad(inputBuscar.value);
+              } catch (e) {
+                console.error('Error enviando solicitud:', e);
+                btn.disabled = false;
+                btn.innerText = 'Seguir';
+              }
+            });
+          });
+        } else {
+          secUsuarios.classList.add('hidden');
+        }
+      } else {
+        secUsuarios.classList.add('hidden');
+      }
+
+      // ------------------------------------------------------------------
+      // B. BÚSQUEDA Y LISTADO DE RECETAS (SOLO DE USUARIOS SEGUIDOS ACEPTADOS)
+      // ------------------------------------------------------------------
+      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
+
+      if (idsAceptados.length === 0) {
+        gridFeed.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
+            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no tienes recetas para mostrar</p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
+          </div>
+        `;
         return;
       }
 
-      // Obtener perfiles de autores
-      const userIds = [...new Set(recetas.map(r => r.user_id))];
-      const { data: perfiles } = await supabase.from('perfiles').select('*').in('id', userIds);
-      const mapaPerfiles = {};
-      (perfiles || []).forEach(p => { mapaPerfiles[p.id] = p; });
+      // Consultar únicamente recetas públicas de los usuarios a los que sigues
+      const { data: recetas, error: errRecetas } = await supabase
+        .from('recetas')
+        .select('*')
+        .eq('es_publica', true)
+        .in('user_id', idsAceptados)
+        .order('created_at', { ascending: false });
 
-      // Filtrar por búsqueda
-      const filtro = busqueda.toLowerCase().trim();
-      const recetasFiltradas = recetas.filter(r => {
-        const autor = mapaPerfiles[r.user_id] || {};
-        const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(filtro) : false;
-        const matchUser = autor.username ? autor.username.toLowerCase().includes(filtro) : false;
-        return matchNombre || matchUser;
-      });
+      if (errRecetas || !recetas || recetas.length === 0) {
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Los cocineros a los que sigues no han publicado recetas todavía.</p>';
+        return;
+      }
+
+      const idsAutores = [...new Set(recetas.map(r => r.user_id))];
+      const { data: perfilesAutores } = await supabase.from('perfiles').select('*').in('id', idsAutores);
+      const mapaAutores = {};
+      (perfilesAutores || []).forEach(p => { mapaAutores[p.id] = p; });
+
+      // Filtrar recetas por el término del buscador (nombre de receta o ingredientes)
+      let recetasFiltradas = recetas;
+      if (hayBusqueda) {
+        recetasFiltradas = recetas.filter(r => {
+          const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(termino) : false;
+          const matchIng = r.ingredientes ? r.ingredientes.toLowerCase().includes(termino) : false;
+          return matchNombre || matchIng;
+        });
+      }
 
       if (recetasFiltradas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas con ese término.</p>';
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas coincidentes entre tus seguidos.</p>';
         return;
       }
 
       gridFeed.innerHTML = recetasFiltradas.map(r => {
-        const autor = mapaPerfiles[r.user_id] || {};
+        const autor = mapaAutores[r.user_id] || {};
 
         return `
           <div class="card" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box;">
@@ -142,7 +263,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         `;
       }).join('');
 
-      // IMPORTACIÓN DE RECETAS CON ATRIBUCIÓN AL AUTOR ORIGINAL
+      // EVENTO GUARDAR EN MIS RECETAS
       gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
         btn.addEventListener('click', async () => {
           const recetaId = btn.getAttribute('data-id');
@@ -163,13 +284,12 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            // Nombre del autor original
-            const autor = mapaPerfiles[recetaOriginal.user_id] || {};
-            const nombreAutor = autor.username ? `@${autor.username}` : 'Comunidad';
+            const autor = mapaAutores[recetaOriginal.user_id] || {};
+            const usuarioAutor = autor.username ? `@${autor.username}` : 'Comunidad';
 
             const nuevaRecetaPayload = {
               user_id: usuarioActual.id,
-              nombre: `${recetaOriginal.nombre} (de ${nombreAutor})`,
+              nombre: `${recetaOriginal.nombre} (de ${usuarioAutor})`,
               ingredientes: recetaOriginal.ingredientes || [],
               pasos: recetaOriginal.pasos || [],
               tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
@@ -188,7 +308,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${nombreAutor} se ha añadido a tus recetas.`);
+            mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${usuarioAutor} se ha añadido a tus recetas.`);
             btn.innerText = '¡Guardada!';
 
             if (onRecetaImportada) onRecetaImportada();
@@ -203,10 +323,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     }
 
     inputBuscar.addEventListener('input', (e) => {
-      cargarPublicacionesFeed(e.target.value);
+      cargarComunidad(e.target.value);
     });
 
-    cargarPublicacionesFeed();
+    cargarComunidad();
   }, 0);
 
   return container;
