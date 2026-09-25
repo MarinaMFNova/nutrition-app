@@ -5,6 +5,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const container = document.createElement('div');
   container.className = 'container';
 
+  let categoriaFiltro = 'Todos';
+  const listaCategorias = ['Todos', 'Desayuno', 'Comida', 'Cena', 'Postre', 'Batidos', 'Snack'];
+
   container.innerHTML = `
     <!-- CABECERA DE LA PÁGINA -->
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
@@ -23,6 +26,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
       </div>
+    </div>
+
+    <!-- CHIPS DE FILTRADO POR CATEGORÍA -->
+    <div id="contenedorChipsFeed" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 20px; scrollbar-width: none;">
+      ${listaCategorias.map(cat => `
+        <button class="chip-categoria-feed ${cat === 'Todos' ? 'active' : ''}" data-cat="${cat}" style="padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); ${cat === 'Todos' ? 'background: var(--primary); color: white; border-color: var(--primary);' : 'background: var(--input-bg); color: var(--text-muted);'}">
+          ${cat}
+        </button>
+      `).join('')}
     </div>
 
     <!-- SECCIÓN 1: RESULTADOS DE BÚSQUEDA DE COCINEROS -->
@@ -86,6 +98,23 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
     modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
+    // FILTRADO POR CHIPS DE CATEGORÍA
+    container.querySelectorAll('.chip-categoria-feed').forEach(chip => {
+      chip.addEventListener('click', () => {
+        container.querySelectorAll('.chip-categoria-feed').forEach(c => {
+          c.style.background = 'var(--input-bg)';
+          c.style.color = 'var(--text-muted)';
+          c.style.borderColor = 'var(--border)';
+        });
+        chip.style.background = 'var(--primary)';
+        chip.style.color = 'white';
+        chip.style.borderColor = 'var(--primary)';
+
+        categoriaFiltro = chip.getAttribute('data-cat');
+        cargarComunidad(inputBuscar.value);
+      });
+    });
+
     function mostrarAvisoModal(titulo, mensaje, esError = false) {
       modalTitle.innerText = titulo;
       modalMsg.innerText = mensaje;
@@ -119,7 +148,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
         <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
         <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
-          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min
+          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
         </div>
 
         <div style="margin-bottom: 16px;">
@@ -156,6 +185,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
 
+      // 1. BUSCADOR DE PERFILES
       if (hayBusqueda) {
         const { data: perfilesEncontrados } = await supabase
           .from('perfiles')
@@ -229,6 +259,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
+      // 2. RECETAS DE USUARIOS ACEPTADOS
       gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
 
       if (idsAceptados.length === 0) {
@@ -258,17 +289,19 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const mapaAutores = {};
       (perfilesAutores || []).forEach(p => { mapaAutores[p.id] = p; });
 
-      let recetasFiltradas = recetas;
-      if (hayBusqueda) {
-        recetasFiltradas = recetas.filter(r => {
-          const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(termino) : false;
-          const matchIng = r.ingredientes ? r.ingredientes.toLowerCase().includes(termino) : false;
-          return matchNombre || matchIng;
-        });
-      }
+      // FILTRADO COMBINADO POR TEXTO Y CATEGORÍA
+      let recetasFiltradas = recetas.filter(r => {
+        const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(termino) : false;
+        const matchIng = r.ingredientes ? r.ingredientes.toLowerCase().includes(termino) : false;
+        const matchTexto = hayBusqueda ? (matchNombre || matchIng) : true;
+
+        const matchCat = categoriaFiltro === 'Todos' || (r.categorias && r.categorias.toLowerCase().includes(categoriaFiltro.toLowerCase()));
+        
+        return matchTexto && matchCat;
+      });
 
       if (recetasFiltradas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas coincidentes entre tus seguidos.</p>';
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas coincidentes en esta categoría.</p>';
         return;
       }
 
@@ -326,6 +359,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         });
       });
 
+      // ACCIÓN DE GUARDAR RECETA CON NOTIFICACIÓN DIRIGIDA AL AUTOR REAL
       gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -343,11 +377,12 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             if (getErr || !recetaOriginal) {
               mostrarAvisoModal('Error', 'No se pudo leer la información de la receta.', true);
               btn.disabled = false;
-              btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
+              btn.innerText = 'Guardar en Mis Recetas';
               return;
             }
 
-            const autor = mapaAutores[recetaOriginal.user_id] || {};
+            const autorOriginalId = recetaOriginal.user_id;
+            const autor = mapaAutores[autorOriginalId] || {};
             const usuarioAutor = autor.username ? `@${autor.username}` : 'Comunidad';
 
             const nuevaRecetaPayload = {
@@ -357,6 +392,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               pasos: recetaOriginal.pasos || [],
               tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
               imagen_url: recetaOriginal.imagen_url || null,
+              categorias: recetaOriginal.categorias || 'Comida',
               es_publica: false
             };
 
@@ -367,18 +403,24 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             if (insertErr) {
               mostrarAvisoModal('Error al importar', insertErr.message || 'Error al guardar la receta.', true);
               btn.disabled = false;
-              btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
+              btn.innerText = 'Guardar en Mis Recetas';
               return;
             }
 
-            // NOTIFICAR AL AUTOR ORIGINAL QUE HAN GUARDADO SU RECETA
-            await supabase.from('notificaciones').insert([{
-              user_id: recetaOriginal.user_id,
-              emisor_id: usuarioActual.id,
-              tipo: 'receta_guardada',
-              referencia: recetaOriginal.nombre,
-              leida: false
-            }]);
+            // ENVIAR NOTIFICACIÓN DIRECTA AL AUTOR ORIGINAL
+            if (autorOriginalId && autorOriginalId !== usuarioActual.id) {
+              const { error: notifErr } = await supabase.from('notificaciones').insert([{
+                user_id: autorOriginalId,
+                emisor_id: usuarioActual.id,
+                tipo: 'receta_guardada',
+                referencia: recetaOriginal.nombre,
+                leida: false
+              }]);
+
+              if (notifErr) {
+                console.error('Error enviando notificación:', notifErr.message);
+              }
+            }
 
             mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${usuarioAutor} se ha añadido a tus recetas.`);
             btn.innerText = '¡Guardada!';
@@ -386,9 +428,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             if (onRecetaImportada) onRecetaImportada();
 
           } catch (err) {
+            console.error('Error en proceso de importación:', err);
             mostrarAvisoModal('Error inesperado', err.message || 'Error al procesar la importación.', true);
             btn.disabled = false;
-            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
+            btn.innerText = 'Guardar en Mis Recetas';
           }
         });
       });

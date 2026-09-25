@@ -7,9 +7,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   let recetas = [];
   let busqueda = '';
+  let categoriaFiltro = 'Todos';
   let imagenBase64 = null;
   let recetaEditandoId = null;
   let recetaABorrarId = null;
+
+  const listaCategorias = ['Todos', 'Desayuno', 'Comida', 'Cena', 'Postre', 'Batidos', 'Snack'];
 
   container.innerHTML = `
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
@@ -26,11 +29,21 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         </button>
   </div>
 
-    <div style="position: relative; width: 100%; margin-bottom: 20px;">
+    <!-- BUSCADOR -->
+    <div style="position: relative; width: 100%; margin-bottom: 12px;">
       <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none; color: var(--text-muted);">
         ${icons.search}
       </div>
       <input type="text" id="inputBuscar" placeholder="Buscar por nombre o ingrediente..." style="padding-left: 42px; margin-top: 0; height: 42px; border-radius: 12px; font-size: 14px;" />
+    </div>
+
+    <!-- CHIPS DE FILTRADO POR CATEGORÍA -->
+    <div id="contenedorChipsCategorias" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 20px; scrollbar-width: none;">
+      ${listaCategorias.map(cat => `
+        <button class="chip-categoria ${cat === 'Todos' ? 'active' : ''}" data-cat="${cat}" style="padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); ${cat === 'Todos' ? 'background: var(--primary); color: white; border-color: var(--primary);' : 'background: var(--input-bg); color: var(--text-muted);'}">
+          ${cat}
+        </button>
+      `).join('')}
     </div>
 
     <!-- FORMULARIO CREAR Y EDITAR -->
@@ -52,14 +65,17 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
           <p style="margin: 4px 0 0 28px; font-size: 11px; color: var(--text-muted);">Tus seguidores podrán verla e importarla a su perfil.</p>
         </div>
 
-        <!-- SELECCIÓN DE MOMENTO DEL DÍA -->
+        <!-- SELECCIÓN DE CATEGORÍAS -->
         <div>
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">¿Para qué momento del día es apta?</label>
-          <div style="display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">¿Para qué momento o tipo es apta?</label>
+          <div style="display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap;">
             <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Desayuno" style="width:auto; margin:0 4px 0 0;"> Desayuno</label>
             <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Comida" style="width:auto; margin:0 4px 0 0;" checked> Comida</label>
             <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Merienda" style="width:auto; margin:0 4px 0 0;"> Merienda</label>
             <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Cena" style="width:auto; margin:0 4px 0 0;" checked> Cena</label>
+            <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Postre" style="width:auto; margin:0 4px 0 0;"> Postre</label>
+            <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Batidos" style="width:auto; margin:0 4px 0 0;"> Batidos</label>
+            <label style="font-size: 13px; font-weight: 600;"><input type="checkbox" class="chk-cat" value="Snack" style="width:auto; margin:0 4px 0 0;"> Snack</label>
           </div>
         </div>
 
@@ -102,7 +118,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       </form>
     </div>
 
-    <!-- TARJETAS COMPACTAS Y MÁS PEQUEÑAS -->
+    <!-- TARJETAS COMPACTAS -->
     <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;"></div>
 
     <!-- MODAL DETALLE DE RECETA -->
@@ -158,6 +174,22 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   if (abrirFormularioInicial) modalForm.classList.remove('hidden');
 
+  container.querySelectorAll('.chip-categoria').forEach(chip => {
+    chip.addEventListener('click', () => {
+      container.querySelectorAll('.chip-categoria').forEach(c => {
+        c.style.background = 'var(--input-bg)';
+        c.style.color = 'var(--text-muted)';
+        c.style.borderColor = 'var(--border)';
+      });
+      chip.style.background = 'var(--primary)';
+      chip.style.color = 'white';
+      chip.style.borderColor = 'var(--primary)';
+
+      categoriaFiltro = chip.getAttribute('data-cat');
+      renderGrid();
+    });
+  });
+
   inputFile.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -192,12 +224,11 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     formErrorMsg.style.display = 'none';
   }
 
-function exportarRecetaPDF(r) {
+  function exportarRecetaPDF(r) {
     const ventanaImpresion = window.open('', '_blank');
     const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin ingredientes.</p>';
     const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin pasos.</p>';
 
-    // SVG vectorial exacto del logo de BiteLife (Gorro de chef)
     const logoAppSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 10.58 0A4 4 0 0 1 18 13.87V21H6z"></path><line x1="6" y1="17" x2="18" y2="17"></line></svg>`;
 
     ventanaImpresion.document.write(`
@@ -305,11 +336,16 @@ function exportarRecetaPDF(r) {
   }
 
   function renderGrid() {
-    const filtradas = recetas.filter(r => r.nombre.toLowerCase().includes(busqueda) || (r.ingredientes && r.ingredientes.toLowerCase().includes(busqueda)));
+    const filtradas = recetas.filter(r => {
+      const matchBusqueda = r.nombre.toLowerCase().includes(busqueda) || (r.ingredientes && r.ingredientes.toLowerCase().includes(busqueda));
+      const matchCategoria = categoriaFiltro === 'Todos' || (r.categorias && r.categorias.toLowerCase().includes(categoriaFiltro.toLowerCase()));
+      return matchBusqueda && matchCategoria;
+    });
+
     grid.innerHTML = '';
 
     if (filtradas.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas.</p></div>`;
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas en esta categoría.</p></div>`;
       return;
     }
 
