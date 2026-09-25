@@ -43,7 +43,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       </div>
     </div>
 
-    <!-- MODAL FORMAL DE NOTIFICACIÓN -->
+    <!-- MODAL DETALLE DE RECETA DEL FEED -->
+    <div id="modalDetalleFeed" class="sidebar-overlay">
+      <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
+        <button id="btnCloseDetalleFeed" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
+        <div id="contenidoDetalleFeed"></div>
+      </div>
+    </div>
+
+    <!-- MODAL NOTIFICACIÓN -->
     <div id="modalNotificacionFeed" class="sidebar-overlay">
       <div class="card" style="max-width: 380px; width: 90%; margin: 120px auto; padding: 24px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
         <div id="feedModalIcon" style="width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
@@ -63,6 +71,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const inputBuscar = container.querySelector('#inputBuscarFeed');
     const secUsuarios = container.querySelector('#secUsuariosEncontrados');
     const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
+
+    const modalDetalle = container.querySelector('#modalDetalleFeed');
+    const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
+    const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
     
     const modalNotif = container.querySelector('#modalNotificacionFeed');
     const modalIcon = container.querySelector('#feedModalIcon');
@@ -70,9 +82,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const modalMsg = container.querySelector('#feedModalMsg');
     const btnCerrarModal = container.querySelector('#btnCerrarModalFeed');
 
-    btnCerrarModal.addEventListener('click', () => {
-      modalNotif.classList.remove('visible');
-    });
+    btnCerrarModal.addEventListener('click', () => modalNotif.classList.remove('visible'));
+    btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
+    modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
     function mostrarAvisoModal(titulo, mensaje, esError = false) {
       modalTitle.innerText = titulo;
@@ -91,11 +103,47 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       modalNotif.classList.add('visible');
     }
 
+    function abrirDetalleFeed(r, autor) {
+      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+      const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes especificados.</p>';
+      const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin pasos explicados.</p>';
+
+      contenidoDetalle.innerHTML = `
+        ${imgHtml}
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+            ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
+          </div>
+          <span style="font-size: 13px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
+        </div>
+
+        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            ${icons.cart || '🛒'} Ingredientes
+          </h4>
+          <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-main); line-height: 1.5;">${ingredientesHtml}</ul>
+        </div>
+
+        <div>
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            ${icons.chef || '👨‍🍳'} Pasos
+          </h4>
+          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5;">${pasosHtml}</div>
+        </div>
+      `;
+
+      modalDetalle.classList.add('visible');
+    }
+
     async function cargarComunidad(busqueda = '') {
       const termino = busqueda.toLowerCase().trim().replace('@', '');
       const hayBusqueda = termino.length > 0;
 
-      // OBTENER RELACIONES DE SEGUIMIENTO DEL USUARIO ACTUAL
       const { data: relaciones } = await supabase
         .from('seguidores')
         .select('seguido_id, estado')
@@ -108,9 +156,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
 
-      // ------------------------------------------------------------------
-      // A. BÚSQUEDA DE COCINEROS / PERFILES
-      // ------------------------------------------------------------------
       if (hayBusqueda) {
         const { data: perfilesEncontrados } = await supabase
           .from('perfiles')
@@ -148,7 +193,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             `;
           }).join('');
 
-          // EVENTO ENVIAR SOLICITUD
           gridUsuarios.querySelectorAll('.btn-enviar-solicitud').forEach(btn => {
             btn.addEventListener('click', async () => {
               const idDestino = btn.getAttribute('data-id');
@@ -185,9 +229,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
-      // ------------------------------------------------------------------
-      // B. BÚSQUEDA Y LISTADO DE RECETAS (SOLO DE USUARIOS SEGUIDOS ACEPTADOS)
-      // ------------------------------------------------------------------
       gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
 
       if (idsAceptados.length === 0) {
@@ -200,7 +241,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         return;
       }
 
-      // Consultar únicamente recetas públicas de los usuarios a los que sigues
       const { data: recetas, error: errRecetas } = await supabase
         .from('recetas')
         .select('*')
@@ -218,7 +258,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const mapaAutores = {};
       (perfilesAutores || []).forEach(p => { mapaAutores[p.id] = p; });
 
-      // Filtrar recetas por el término del buscador (nombre de receta o ingredientes)
       let recetasFiltradas = recetas;
       if (hayBusqueda) {
         recetasFiltradas = recetas.filter(r => {
@@ -235,9 +274,12 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
       gridFeed.innerHTML = recetasFiltradas.map(r => {
         const autor = mapaAutores[r.user_id] || {};
+        const listaIngredientes = r.ingredientes 
+          ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
+          : 'Sin ingredientes especificados';
 
         return `
-          <div class="card" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box;">
+          <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
@@ -249,10 +291,19 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               </div>
 
               <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
-              <p style="margin: 0 0 10px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>${r.tiempo_preparacion || 15} min</span>
               </p>
+
+              <div style="margin-bottom: 10px; padding: 6px 8px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);">
+                <span style="font-size: 10px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+                  ${icons.cart || '🛒'} Ingredientes:
+                </span>
+                <p style="margin: 2px 0 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                  ${listaIngredientes}
+                </p>
+              </div>
             </div>
 
             <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border);">
@@ -263,9 +314,21 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         `;
       }).join('');
 
-      // EVENTO GUARDAR EN MIS RECETAS
+      gridFeed.querySelectorAll('.card-receta-feed').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-importar-receta')) return;
+          const id = card.getAttribute('data-id');
+          const recetaSel = recetas.find(item => item.id === id);
+          if (recetaSel) {
+            const autor = mapaAutores[recetaSel.user_id] || {};
+            abrirDetalleFeed(recetaSel, autor);
+          }
+        });
+      });
+
       gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const recetaId = btn.getAttribute('data-id');
           btn.disabled = true;
           btn.innerText = 'Guardando...';
@@ -307,6 +370,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>Guardar en Mis Recetas</span>`;
               return;
             }
+
+            // NOTIFICAR AL AUTOR ORIGINAL QUE HAN GUARDADO SU RECETA
+            await supabase.from('notificaciones').insert([{
+              user_id: recetaOriginal.user_id,
+              emisor_id: usuarioActual.id,
+              tipo: 'receta_guardada',
+              referencia: recetaOriginal.nombre,
+              leida: false
+            }]);
 
             mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${usuarioAutor} se ha añadido a tus recetas.`);
             btn.innerText = '¡Guardada!';

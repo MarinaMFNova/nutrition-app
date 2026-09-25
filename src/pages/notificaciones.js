@@ -57,12 +57,15 @@ export function renderNotificacionesView(usuarioActual) {
       const emisor = mapaPerfiles[n.emisor_id] || {};
       const esSolicitud = n.tipo === 'solicitud_seguimiento';
       const esConexionMutua = n.tipo === 'conexion_mutua';
+      const esRecetaGuardada = n.tipo === 'receta_guardada';
 
       let textoNotificacion = '';
       if (esSolicitud) {
         textoNotificacion = 'quiere seguirte.';
       } else if (esConexionMutua) {
         textoNotificacion = 'y tú ahora os seguís mutuamente. 🎉';
+      } else if (esRecetaGuardada) {
+        textoNotificacion = `ha guardado tu receta <strong>"${n.referencia || 'de tu perfil'}"</strong> en su recetario. 📖`;
       } else if (n.tipo === 'seguimiento_aceptado') {
         textoNotificacion = 'ha aceptado tu solicitud de seguimiento.';
       } else {
@@ -107,7 +110,6 @@ export function renderNotificacionesView(usuarioActual) {
       `;
     }).join('');
 
-    // ACEPTAR Y SEGUIR TAMBIÉN
     lista.querySelectorAll('.btn-aceptar-y-seguir').forEach(btn => {
       btn.addEventListener('click', async () => {
         const notifId = btn.getAttribute('data-notifid');
@@ -117,20 +119,16 @@ export function renderNotificacionesView(usuarioActual) {
         btn.innerText = 'Procesando...';
 
         try {
-          // 1. Aceptar solicitud recibida
           await supabase.from('seguidores').update({ estado: 'aceptado' }).eq('seguidor_id', emisorId).eq('seguido_id', usuarioActual.id);
 
-          // 2. Registrar el seguimiento reciproco
           await supabase.from('seguidores').upsert([{
             seguidor_id: usuarioActual.id,
             seguido_id: emisorId,
             estado: 'aceptado'
           }]);
 
-          // 3. Transformar la notificación actual en una confirmación de conexión mutua
           await supabase.from('notificaciones').update({ tipo: 'conexion_mutua', leida: true }).eq('id', notifId);
 
-          // 4. Notificar al emisor original que también le sigues
           await supabase.from('notificaciones').insert([{
             user_id: emisorId,
             emisor_id: usuarioActual.id,
@@ -146,7 +144,6 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
-    // SOLO ACEPTAR
     lista.querySelectorAll('.btn-aceptar').forEach(btn => {
       btn.addEventListener('click', async () => {
         const notifId = btn.getAttribute('data-notifid');
@@ -174,7 +171,6 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
-    // RECHAZAR
     lista.querySelectorAll('.btn-rechazar').forEach(btn => {
       btn.addEventListener('click', async () => {
         const notifId = btn.getAttribute('data-notifid');
@@ -194,7 +190,6 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
-    // BORRAR NOTIFICACIÓN INDIVIDUAL
     lista.querySelectorAll('.btn-borrar-notif').forEach(btn => {
       btn.addEventListener('click', async () => {
         const notifId = btn.getAttribute('data-notifid');
