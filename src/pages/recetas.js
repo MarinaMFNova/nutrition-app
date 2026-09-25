@@ -102,9 +102,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       </form>
     </div>
 
-    <!-- TARJETAS COMPACTAS Y MÁS PEQUEÑAS (minmax de 200px) -->
+    <!-- TARJETAS COMPACTAS Y MÁS PEQUEÑAS -->
     <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;"></div>
 
+    <!-- MODAL DETALLE DE RECETA -->
     <div id="modalDetalleReceta" class="sidebar-overlay">
       <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
         <button id="btnCloseDetalle" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
@@ -112,7 +113,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       </div>
     </div>
 
-    <!-- MODAL CONFIRMACIÓN ELIMINAR RECETA (DISEÑO FORMAL DE BITELIFE) -->
+    <!-- MODAL CONFIRMACIÓN ELIMINAR RECETA -->
     <div id="modalConfirmarEliminarReceta" class="sidebar-overlay">
       <div class="card" style="max-width: 380px; width: 90%; margin: 120px auto; padding: 24px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
         <div style="width: 52px; height: 52px; border-radius: 50%; background: #fee2e2; color: var(--danger); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
@@ -191,13 +192,85 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     formErrorMsg.style.display = 'none';
   }
 
+function exportarRecetaPDF(r) {
+    const ventanaImpresion = window.open('', '_blank');
+    const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin ingredientes.</p>';
+    const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin pasos.</p>';
+
+    // SVG vectorial exacto del logo de BiteLife (Gorro de chef)
+    const logoAppSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 10.58 0A4 4 0 0 1 18 13.87V21H6z"></path><line x1="6" y1="17" x2="18" y2="17"></line></svg>`;
+
+    ventanaImpresion.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>${r.nombre} - BiteLife</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 30px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+          .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: flex-start; align-items: center; }
+          .logo { font-size: 24px; font-weight: 800; color: #2ba8a8; display: flex; align-items: center; gap: 10px; }
+          .receta-title { font-size: 20px; font-weight: 800; color: #2ba8a8; margin: 10px 0 6px 0; }
+          .meta { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+          .meta svg { width: 14px; height: 14px; }
+          .imagen { width: 100%; max-height: 250px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; }
+          .seccion { margin-bottom: 20px; }
+          .seccion-titulo { font-size: 14px; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+          .seccion-titulo svg { width: 16px; height: 16px; color: #1e293b; }
+          ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #1e293b; }
+          p { margin: 0 0 6px 0; font-size: 13px; line-height: 1.5; color: #1e293b; }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">
+            <span>${logoAppSvg}</span>
+            <span>BiteLife</span>
+          </div>
+        </div>
+        
+        <h1 class="receta-title">${r.nombre}</h1>
+        <div class="meta">
+          <span>${icons.time || ''}</span>
+          <span>${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</span>
+        </div>
+        
+        ${r.imagen_url ? `<img src="${r.imagen_url}" class="imagen" />` : ''}
+
+        <div class="seccion">
+          <div class="seccion-titulo">
+            <span>${icons.cart || ''}</span>
+            <span>Ingredientes</span>
+          </div>
+          <ul>${ingredientesHtml}</ul>
+        </div>
+
+        <div class="seccion">
+          <div class="seccion-titulo">
+            <span>${icons.chef || ''}</span>
+            <span>Pasos</span>
+          </div>
+          <div>${pasosHtml}</div>
+        </div>
+      </body>
+      </html>
+    `);
+
+    ventanaImpresion.document.close();
+    setTimeout(() => {
+      ventanaImpresion.print();
+    }, 200);
+  }
+
   btnNueva.addEventListener('click', () => { resetFormulario(); modalForm.classList.toggle('hidden'); });
   btnCancelar.addEventListener('click', () => { modalForm.classList.add('hidden'); resetFormulario(); });
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
   btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
   inputBuscar.addEventListener('input', (e) => { busqueda = e.target.value.toLowerCase(); renderGrid(); });
 
-  // EVENTOS PARA EL MODAL DE BORRADO
   btnCancelarBorrar.addEventListener('click', () => {
     modalBorrar.classList.remove('visible');
     recetaABorrarId = null;
@@ -320,7 +393,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       ${imgHtml}
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
         <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${icons.edit} Editar</button>
+        <div style="display: flex; gap: 6px;">
+          <button id="btnExportPDFDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> Exportar PDF
+          </button>
+          <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${icons.edit} Editar</button>
+        </div>
       </div>
       <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">${icons.time} ${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</div>
       <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">${estadoTexto}</div>
@@ -343,6 +421,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     contenidoDetalle.querySelector('#btnEditFromDetail').addEventListener('click', () => {
       modalDetalle.classList.remove('visible');
       abrirEdicionReceta(r);
+    });
+
+    contenidoDetalle.querySelector('#btnExportPDFDetail').addEventListener('click', () => {
+      exportarRecetaPDF(r);
     });
 
     modalDetalle.classList.add('visible');
