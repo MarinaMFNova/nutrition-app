@@ -85,11 +85,11 @@ h1, h2, h3, h4, p, span, button {
   margin-bottom: 16px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Oculta scrollbar en Firefox */
+  scrollbar-width: none;
 }
 
 .filters-scroll-container::-webkit-scrollbar {
-  display: none; /* Oculta scrollbar en Chrome/Safari */
+  display: none;
 }
 
 /* CHIPS / BOTONES DE FILTRO */
@@ -159,7 +159,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 16px; /* 16px mínimo para evitar zoom automático en iOS */
+  font-size: 16px;
   outline: none;
 }
 
@@ -221,7 +221,7 @@ button:hover { background-color: var(--primary-hover); }
 }
 .btn-outline:hover { background: var(--input-bg); }
 
-/* CONTENEDOR PRINCIPAL FIX */
+/* CONTENEDOR PRINCIPAL */
 .layout-container {
   display: flex;
   height: 100vh;
@@ -243,7 +243,7 @@ button:hover { background-color: var(--primary-hover); }
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  z-index: 1001;
+  z-index: 1005 !important; /* Por encima de la capa de fondo del menú */
   overflow: hidden;
   transition: width 0.3s ease, padding 0.3s ease, transform 0.3s ease;
 }
@@ -297,7 +297,7 @@ button:hover { background-color: var(--primary-hover); }
   color: var(--primary);
 }
 
-/* ESTADO COLAPSADO (SOLO ICONOS) */
+/* ESTADO COLAPSADO */
 .sidebar.collapsed {
   width: 72px;
   padding: 20px 10px;
@@ -308,7 +308,6 @@ button:hover { background-color: var(--primary-hover); }
   margin-bottom: 20px;
 }
 
-/* OCULTA TODO EL BLOQUE DEL TITULO E ICONO AL COLAPSAR */
 .sidebar.collapsed .brand-title,
 .sidebar.collapsed .nav-item-text,
 .sidebar.collapsed .user-email-text {
@@ -534,32 +533,41 @@ button:hover { background-color: var(--primary-hover); }
   color: var(--text-muted);
 }
 
-/* ESTILOS PARA CENTRAR MODALES EMERGENTES Y EVITAR DESCUADRES */
+/* OVERLAY PARA EL MENÚ LATERAL MÓVIL (DETRÁS DEL SIDEBAR) */
 .sidebar-overlay {
   display: none;
   position: fixed;
-  top: 0; 
-  left: 0; 
-  right: 0; 
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  z-index: 1000 !important;
+}
+
+.sidebar-overlay.visible { 
+  display: block; 
+}
+
+/* OVERLAY Y MODALES EMERGENTES (DETALLE DE RECETA, PERFIL, AVISOS) */
+.modal-overlay,
+.sidebar-overlay:has(.modal-dialog-content) {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
   background-color: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 2000 !important; /* Por encima del sidebar */
+  z-index: 2000 !important;
   align-items: center;
   justify-content: center;
   padding: 16px;
   overflow-y: auto;
 }
 
-.sidebar-overlay.visible {
+.sidebar-overlay:has(.modal-dialog-content).visible {
   display: flex !important;
 }
 
-/* CONTENEDOR INTERNO DEL MODAL */
-.modal-dialog-content,
-.sidebar-overlay .card {
+.modal-dialog-content {
   width: 100% !important;
-  max-width: 500px !important; /* Ancho máximo en escritorio */
+  max-width: 500px !important;
   max-height: 85vh;
   margin: auto !important;
   position: relative;
@@ -616,7 +624,6 @@ button:hover { background-color: var(--primary-hover); }
     padding: 6px 0;
   }
 
-  /* FORZAR 2 COLUMNAS EN MÓVIL PARA EL FEED Y MIS RECETAS */
   #gridFeed,
   #gridRecetas {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -633,12 +640,7 @@ button:hover { background-color: var(--primary-hover); }
     font-size: 13px !important;
   }
 
-  .sidebar-overlay {
-    padding: 10px !important;
-  }
-  
-  .modal-dialog-content,
-  .sidebar-overlay .card {
+  .modal-dialog-content {
     max-width: 96% !important;
     padding: 16px !important;
   }
