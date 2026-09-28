@@ -15,19 +15,19 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const listaCategorias = ['Todos', 'Desayuno', 'Comida', 'Cena', 'Postre', 'Batidos', 'Snack'];
 
   container.innerHTML = `
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-        <div>
-          <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
-            <span style="display: flex; align-items: center; color: var(--primary);">${icons.recetas}</span>
-            <span>Mis Recetas</span>
-          </h1>
-          <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Gestiona tus platos y preparaciones favoritas</p>
-        </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+          <span style="display: flex; align-items: center; color: var(--primary);">${icons.recetas}</span>
+          <span>Mis Recetas</span>
+        </h1>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Gestiona tus platos y preparaciones favoritas</p>
+      </div>
 
-        <button id="btnNuevaReceta" style="width: auto; padding: 8px 16px; margin: 0; border-radius: 10px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-          <span style="font-size: 16px;">+</span> Añadir receta
-        </button>
-  </div>
+      <button id="btnNuevaReceta" style="width: auto; padding: 8px 16px; margin: 0; border-radius: 10px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 16px;">+</span> Añadir receta
+      </button>
+    </div>
 
     <!-- BUSCADOR -->
     <div style="position: relative; width: 100%; margin-bottom: 12px;">
@@ -101,12 +101,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
         <div>
           <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Ingredientes</label>
-          <textarea id="recetaIngredientes" rows="3" placeholder="2 pechugas de pollo&#10;1 vaso de arroz"></textarea>
+          <textarea id="recetaIngredientes" rows="5" placeholder="Para el pollo:&#10;Pechuga de pollo&#10;Sal al gusto&#10;&#10;Para la salsa:&#10;2 cucharadas de mantequilla"></textarea>
         </div>
 
         <div>
           <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Pasos de preparación</label>
-          <textarea id="recetaPasos" rows="3" placeholder="1. Cortar el pollo...&#10;2. Cocinar a fuego lento..."></textarea>
+          <textarea id="recetaPasos" rows="5" placeholder="1. Sazonar el pollo...&#10;2. En una sartén añadir mantequilla..."></textarea>
         </div>
 
         <p id="formErrorMsg" style="color: var(--danger); font-size: 13px; font-weight: 600; margin: 0; display: none;"></p>
@@ -224,12 +224,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     formErrorMsg.style.display = 'none';
   }
 
-  function exportarRecetaPDF(r) {
+function exportarRecetaPDF(r) {
     const ventanaImpresion = window.open('', '_blank');
-    const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin ingredientes.</p>';
-    const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: #64748b; font-size: 12px;">Sin pasos.</p>';
 
-    const logoAppSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 10.58 0A4 4 0 0 1 18 13.87V21H6z"></path><line x1="6" y1="17" x2="18" y2="17"></line></svg>`;
+    const logoAppSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2ba8a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 10.58 0A4 4 0 0 1 18 13.87V21H6z"></path><line x1="6" y1="17" x2="18" y2="17"></line></svg>`;
 
     ventanaImpresion.document.write(`
       <!DOCTYPE html>
@@ -238,18 +236,25 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         <meta charset="UTF-8">
         <title>${r.nombre} - BiteLife</title>
         <style>
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 30px; color: #1e293b; max-width: 800px; margin: 0 auto; }
-          .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: flex-start; align-items: center; }
-          .logo { font-size: 24px; font-weight: 800; color: #2ba8a8; display: flex; align-items: center; gap: 10px; }
-          .receta-title { font-size: 20px; font-weight: 800; color: #2ba8a8; margin: 10px 0 6px 0; }
-          .meta { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
-          .meta svg { width: 14px; height: 14px; }
-          .imagen { width: 100%; max-height: 250px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; }
-          .seccion { margin-bottom: 20px; }
-          .seccion-titulo { font-size: 14px; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-          .seccion-titulo svg { width: 16px; height: 16px; color: #1e293b; }
-          ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #1e293b; }
-          p { margin: 0 0 6px 0; font-size: 13px; line-height: 1.5; color: #1e293b; }
+          @page { size: A4; margin: 12mm; }
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 0; margin: 0; color: #1e293b; font-size: 11px; }
+          
+          .header { border-bottom: 2px solid #2ba8a8; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+          .logo { font-size: 18px; font-weight: 800; color: #2ba8a8; display: flex; align-items: center; gap: 6px; }
+          
+          /* LAYOUT CABECERA CON IMAGEN A LA DERECHA */
+          .top-grid { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+          .info-principal { flex: 1; }
+          .receta-title { font-size: 18px; font-weight: 800; color: #2ba8a8; margin: 0 0 6px 0; line-height: 1.2; }
+          .meta { font-size: 11px; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 6px; }
+          
+          .imagen-derecha { width: 200px; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; flex-shrink: 0; }
+
+          .seccion { margin-bottom: 12px; }
+          .seccion-titulo { font-size: 12px; font-weight: 800; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+          .seccion-titulo svg { width: 14px; height: 14px; color: #1e293b; }
+          .texto-bloque { font-size: 11px; line-height: 1.35; color: #1e293b; white-space: pre-line; }
+          
           @media print {
             body { padding: 0; }
           }
@@ -263,39 +268,45 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
           </div>
         </div>
         
-        <h1 class="receta-title">${r.nombre}</h1>
-        <div class="meta">
-          <span>${icons.time || ''}</span>
-          <span>${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</span>
+        <div class="top-grid">
+          <div class="info-principal">
+            <h1 class="receta-title">${r.nombre}</h1>
+            <div class="meta">
+              <span>${icons.time || '⏱'}</span>
+              <span>${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</span>
+            </div>
+          </div>
+          ${r.imagen_url ? `<img src="${r.imagen_url}" class="imagen-derecha" />` : ''}
         </div>
-        
-        ${r.imagen_url ? `<img src="${r.imagen_url}" class="imagen" />` : ''}
 
         <div class="seccion">
           <div class="seccion-titulo">
-            <span>${icons.cart || ''}</span>
+            <span>${icons.cart || '🛒'}</span>
             <span>Ingredientes</span>
           </div>
-          <ul>${ingredientesHtml}</ul>
+          <div class="texto-bloque">${r.ingredientes || 'Sin ingredientes.'}</div>
         </div>
 
         <div class="seccion">
           <div class="seccion-titulo">
-            <span>${icons.chef || ''}</span>
+            <span>${icons.chef || '👨‍🍳'}</span>
             <span>Pasos</span>
           </div>
-          <div>${pasosHtml}</div>
+          <div class="texto-bloque">${r.pasos || 'Sin pasos.'}</div>
         </div>
       </body>
       </html>
     `);
 
     ventanaImpresion.document.close();
+    
     setTimeout(() => {
+      ventanaImpresion.focus();
       ventanaImpresion.print();
-    }, 200);
+      ventanaImpresion.close();
+    }, 250);
   }
-
+  
   btnNueva.addEventListener('click', () => { resetFormulario(); modalForm.classList.toggle('hidden'); });
   btnCancelar.addEventListener('click', () => { modalForm.classList.add('hidden'); resetFormulario(); });
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
@@ -420,8 +431,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   function abrirDetalleReceta(r) {
     const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
-    const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes.</p>';
-    const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin pasos.</p>';
 
     const estadoTexto = r.es_publica ? `${icons.globe} Receta pública (visible para la comunidad)` : `${icons.lock} Receta privada`;
 
@@ -443,14 +452,14 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
           ${icons.cart} Ingredientes
         </h4>
-        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-main);">${ingredientesHtml}</ul>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes.'}</div>
       </div>
 
       <div>
         <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
           ${icons.chef} Pasos
         </h4>
-        <div style="font-size: 13px; color: var(--text-main);">${pasosHtml}</div>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos.'}</div>
       </div>
     `;
 
