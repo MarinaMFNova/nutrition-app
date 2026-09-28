@@ -15,9 +15,15 @@ export function renderNotificacionesView(usuarioActual) {
         <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Gestiona tus solicitudes de seguimiento e interacciones sociales</p>
       </div>
 
-      <button id="btnLimpiarNotifs" class="btn-outline" style="width: auto; padding: 6px 14px; font-size: 11px; font-weight: 700; margin: 0; border-radius: 8px; display: none;">
-        Limpiar todas
-      </button>
+      <!-- BOTONES MARCAR LEÍDAS Y LIMPIAR -->
+      <div id="accionesNotifs" style="display: none; gap: 8px;">
+        <button id="btnMarcarLeidas" class="btn-outline" style="width: auto; padding: 6px 12px; font-size: 11px; font-weight: 700; margin: 0; border-radius: 8px;">
+          Marcar leídas
+        </button>
+        <button id="btnLimpiarNotifs" class="btn-outline" style="width: auto; padding: 6px 12px; font-size: 11px; font-weight: 700; margin: 0; border-radius: 8px; color: var(--danger); border-color: var(--border);">
+          Limpiar todas
+        </button>
+      </div>
     </div>
 
     <div class="card" style="padding: 20px; max-width: 620px; border-radius: 16px;">
@@ -29,7 +35,10 @@ export function renderNotificacionesView(usuarioActual) {
 
   async function cargarNotificaciones() {
     const lista = container.querySelector('#contenedorListaNotificaciones');
+    const accionesNotifs = container.querySelector('#accionesNotifs');
+    const btnMarcarLeidas = container.querySelector('#btnMarcarLeidas');
     const btnLimpiar = container.querySelector('#btnLimpiarNotifs');
+    
     if (!lista) return;
 
     lista.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); margin: 0;">Cargando notificaciones...</p>';
@@ -42,11 +51,11 @@ export function renderNotificacionesView(usuarioActual) {
 
     if (error || !notifs || notifs.length === 0) {
       lista.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); margin: 0;">No tienes notificaciones pendientes.</p>';
-      if (btnLimpiar) btnLimpiar.style.display = 'none';
+      if (accionesNotifs) accionesNotifs.style.display = 'none';
       return;
     }
 
-    if (btnLimpiar) btnLimpiar.style.display = 'block';
+    if (accionesNotifs) accionesNotifs.style.display = 'flex';
 
     const emisorIds = [...new Set(notifs.map(n => n.emisor_id))];
     const { data: perfiles } = await supabase.from('perfiles').select('*').in('id', emisorIds);
@@ -72,8 +81,12 @@ export function renderNotificacionesView(usuarioActual) {
         textoNotificacion = 'ha interactuado contigo.';
       }
 
+      // Estilo diferenciado si no está leída
+      const estiloFondo = n.leida ? 'var(--input-bg)' : 'var(--primary-light)';
+      const estiloBorde = n.leida ? 'var(--border)' : 'var(--primary)';
+
       return `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: ${estiloFondo}; border-radius: 12px; border: 1px solid ${estiloBorde}; flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 36px; height: 36px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; overflow: hidden; flex-shrink: 0;">
               ${emisor.avatar_url ? `<img src="${emisor.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (emisor.username || 'U').charAt(0).toUpperCase()}
@@ -198,8 +211,23 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
+    // MARCAR TODAS COMO LEÍDAS
+    if (btnMarcarLeidas) {
+      btnMarcarLeidas.onclick = async () => {
+        btnMarcarLeidas.disabled = true;
+        await supabase
+          .from('notificaciones')
+          .update({ leida: true })
+          .eq('user_id', usuarioActual.id);
+        
+        cargarNotificaciones();
+      };
+    }
+
+    // LIMPIAR TODAS LAS NOTIFICACIONES
     if (btnLimpiar) {
       btnLimpiar.onclick = async () => {
+        btnLimpiar.disabled = true;
         await supabase.from('notificaciones').delete().eq('user_id', usuarioActual.id);
         cargarNotificaciones();
       };

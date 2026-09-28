@@ -9,13 +9,13 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const listaCategorias = [
     'Todos', 
     'Desayuno', 
-    'Comida',
-    'Merienda', 
+    'Comida', 
     'Cena', 
     'Salsas', 
     'Postre', 
     'Batidos', 
-    'Snack',  
+    'Snack', 
+    'Entrantes', 
     'Acompañamientos'
   ];
 
@@ -65,7 +65,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         Cargando publicaciones...
       </div>
     </div>
-    
+
+    <!-- MODAL PERFIL PÚBLICO DEL COCINERO -->
+    <div id="modalPerfilCocinero" class="sidebar-overlay">
+      <div class="card modal-dialog-content" style="max-width: 520px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
+        <button id="btnClosePerfilCocinero" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
+        <div id="contenidoPerfilCocinero"></div>
+      </div>
+    </div>
+
     <!-- MODAL DETALLE DE RECETA DEL FEED -->
     <div id="modalDetalleFeed" class="sidebar-overlay">
       <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
@@ -95,6 +103,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const secUsuarios = container.querySelector('#secUsuariosEncontrados');
     const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
 
+    const modalPerfil = container.querySelector('#modalPerfilCocinero');
+    const contenidoPerfil = container.querySelector('#contenidoPerfilCocinero');
+    const btnClosePerfil = container.querySelector('#btnClosePerfilCocinero');
+
     const modalDetalle = container.querySelector('#modalDetalleFeed');
     const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
     const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
@@ -108,6 +120,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     btnCerrarModal.addEventListener('click', () => modalNotif.classList.remove('visible'));
     btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
     modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
+
+    btnClosePerfil.addEventListener('click', () => modalPerfil.classList.remove('visible'));
+    modalPerfil.addEventListener('click', (e) => { if (e.target === modalPerfil) modalPerfil.classList.remove('visible'); });
 
     // FILTRADO POR CHIPS DE CATEGORÍA
     container.querySelectorAll('.filter-chip').forEach(chip => {
@@ -137,40 +152,148 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       modalNotif.classList.add('visible');
     }
 
- function abrirDetalleFeed(r, autor) {
-  const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+    // ABRIR PERFIL DEL COCINERO
+    async function abrirPerfilCocinero(perfil, estadoRelacion) {
+      contenidoPerfil.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando perfil...</p>';
+      modalPerfil.classList.add('visible');
 
-  contenidoDetalle.innerHTML = `
-    ${imgHtml}
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-      <div style="width: 28px; height: 28px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
-        ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
-      </div>
-      <span style="font-size: 13px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
-    </div>
+      // Cargar recetas públicas del usuario
+      const { data: recetasUsuario } = await supabase
+        .from('recetas')
+        .select('*')
+        .eq('user_id', perfil.id)
+        .eq('es_publica', true)
+        .order('created_at', { ascending: false });
 
-    <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
-      ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
-    </div>
+      const listaRecetas = recetasUsuario || [];
 
-    <div style="margin-bottom: 16px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-        ${icons.cart || '🛒'} Ingredientes
-      </h4>
-      <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
-    </div>
+      const gridRecetasPerfil = listaRecetas.length > 0
+        ? listaRecetas.map(r => `
+            <div class="card" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />` : ''}
+                <h4 style="margin: 0 0 2px 0; font-size: 13px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
+                <p style="margin: 0; font-size: 10px; color: var(--text-muted);">⏱ ${r.tiempo_preparacion || 15} min</p>
+              </div>
+              <button class="btn-importar-perfil btn-outline" data-id="${r.id}" style="width: 100%; padding: 4px 8px; font-size: 10px; font-weight: 700; border-radius: 6px; margin-top: 8px;">
+                + Guardar
+              </button>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); font-size: 12px; grid-column: 1/-1;">Este usuario aún no tiene recetas públicas.</p>';
 
-    <div>
-      <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-        ${icons.chef || '👨‍🍳'} Pasos
-      </h4>
-      <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
-    </div>
-  `;
+      contenidoPerfil.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; overflow: hidden; flex-shrink: 0;">
+            ${perfil.avatar_url ? `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (perfil.username || 'U').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h2 style="margin: 0 0 2px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">${perfil.nombre_completo || perfil.username}</h2>
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary);">@${perfil.username}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${listaRecetas.length} recetas públicas</div>
+          </div>
+        </div>
 
-  modalDetalle.classList.add('visible');
-}
+        <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Recetas públicas</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px;">
+          ${gridRecetasPerfil}
+        </div>
+      `;
+
+      // Eventos para guardar recetas desde dentro del perfil del usuario
+      contenidoPerfil.querySelectorAll('.btn-importar-perfil').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const rId = btn.getAttribute('data-id');
+          const rSel = listaRecetas.find(item => item.id === rId);
+          if (!rSel) return;
+
+          btn.disabled = true;
+          btn.innerText = 'Guardando...';
+
+          const payload = {
+            user_id: usuarioActual.id,
+            nombre: `${rSel.nombre} (de @${perfil.username})`,
+            ingredientes: rSel.ingredientes || '',
+            pasos: rSel.pasos || '',
+            tiempo_preparacion: rSel.tiempo_preparacion || 15,
+            imagen_url: rSel.imagen_url || null,
+            categorias: rSel.categorias || 'Comida',
+            es_publica: false
+          };
+
+          const { error } = await supabase.from('recetas').insert([payload]);
+
+          if (!error) {
+            btn.innerText = '¡Guardada!';
+            if (perfil.id !== usuarioActual.id) {
+              await supabase.from('notificaciones').insert([{
+                user_id: perfil.id,
+                emisor_id: usuarioActual.id,
+                tipo: 'receta_guardada',
+                referencia: rSel.nombre,
+                leida: false
+              }]);
+            }
+            if (onRecetaImportada) onRecetaImportada();
+          } else {
+            btn.disabled = false;
+            btn.innerText = '+ Guardar';
+            alert('Error: ' + error.message);
+          }
+        });
+      });
+    }
+
+    function abrirDetalleFeed(r, autor) {
+      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+
+      const listaIngredientesHtml = r.ingredientes
+        ? r.ingredientes.split('\n').filter(l => l.trim()).map(l => `
+            <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+              <span style="color: var(--primary); display: flex; align-items: center; flex-shrink: 0; margin-top: 2px;">
+                ${icons.cart || '🛒'}
+              </span>
+              <span style="font-size: 13px; color: var(--text-main); line-height: 1.4;">${l.trim()}</span>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes especificados.</p>';
+
+      contenidoDetalle.innerHTML = `
+        ${imgHtml}
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;" id="btnAbrirPerfilDesdeModal">
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+            ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
+          </div>
+          <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autor.username || 'usuario'}</span>
+        </div>
+
+        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            ${icons.cart || '🛒'} Ingredientes
+          </h4>
+          <div>${listaIngredientesHtml}</div>
+        </div>
+
+        <div>
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            ${icons.chef || '👨‍🍳'} Pasos
+          </h4>
+          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
+        </div>
+      `;
+
+      contenidoDetalle.querySelector('#btnAbrirPerfilDesdeModal').addEventListener('click', () => {
+        modalDetalle.classList.remove('visible');
+        abrirPerfilCocinero(autor);
+      });
+
+      modalDetalle.classList.add('visible');
+    }
 
     async function cargarComunidad(busqueda = '') {
       const termino = busqueda.toLowerCase().trim().replace('@', '');
@@ -211,8 +334,8 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             }
 
             return `
-              <div class="card" style="padding:12px 14px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-                <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+              <div class="card card-perfil-item" data-id="${p.id}" style="padding:12px 14px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; justify-space-between; gap:10px; cursor:pointer;">
+                <div style="display:flex; align-items:center; gap:10px; overflow:hidden;" class="area-click-perfil" data-id="${p.id}">
                   <div style="width:38px; height:38px; border-radius:50%; background:#e6f4f4; color:#2ba8a8; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; overflow:hidden; flex-shrink:0;">
                     ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
                   </div>
@@ -226,8 +349,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             `;
           }).join('');
 
+          // CLICK EN TARJETA DE USUARIO ENCONTRADO PARA ABRIR SU PERFIL
+          gridUsuarios.querySelectorAll('.area-click-perfil').forEach(area => {
+            area.addEventListener('click', () => {
+              const pId = area.getAttribute('data-id');
+              const perfilSel = perfilesEncontrados.find(item => item.id === pId);
+              if (perfilSel) abrirPerfilCocinero(perfilSel, mapaRelaciones[pId]);
+            });
+          });
+
           gridUsuarios.querySelectorAll('.btn-enviar-solicitud').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
               const idDestino = btn.getAttribute('data-id');
               btn.disabled = true;
               btn.innerText = 'Enviando...';
@@ -319,7 +452,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;" class="click-autor-header" data-autorid="${autor.id}">
                 <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
                   ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
                 </div>
@@ -353,6 +486,17 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       gridFeed.querySelectorAll('.card-receta-feed').forEach(card => {
         card.addEventListener('click', (e) => {
           if (e.target.closest('.btn-importar-receta')) return;
+          
+          // Si pulsa en el header del autor, abrimos el perfil del cocinero directamente
+          const headerAutor = e.target.closest('.click-autor-header');
+          if (headerAutor) {
+            e.stopPropagation();
+            const autorId = headerAutor.getAttribute('data-autorid');
+            const autorSel = mapaAutores[autorId];
+            if (autorSel) abrirPerfilCocinero(autorSel, 'aceptado');
+            return;
+          }
+
           const id = card.getAttribute('data-id');
           const recetaSel = recetas.find(item => item.id === id);
           if (recetaSel) {
