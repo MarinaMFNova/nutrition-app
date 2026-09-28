@@ -61,11 +61,11 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       <h3 id="tituloSeccionRecetas" style="margin: 0 0 14px 0; font-size: 15px; font-weight: 800; color: var(--text-main);">
         Recetas de tus cocineros seguidos
       </h3>
-      <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 230px)); gap: 18px;">
+      <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; width: 100%;">
         Cargando publicaciones...
       </div>
     </div>
-
+    
     <!-- MODAL DETALLE DE RECETA DEL FEED -->
     <div id="modalDetalleFeed" class="sidebar-overlay">
       <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">

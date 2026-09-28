@@ -574,6 +574,23 @@ button:hover { background-color: var(--primary-hover); }
     width: 46px;
     padding: 6px 0;
   }
+
+  /* FORZAR 2 COLUMNAS EN MÓVIL PARA EL FEED Y MIS RECETAS */
+  #gridFeed,
+  #gridRecetas {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .card-receta-feed,
+  #gridRecetas .card {
+    padding: 10px !important;
+  }
+
+  .card-receta-feed h3,
+  #gridRecetas .card h3 {
+    font-size: 13px !important;
+  }
 }
 
 .hidden { display: none !important; }
