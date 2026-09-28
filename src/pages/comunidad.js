@@ -137,42 +137,40 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       modalNotif.classList.add('visible');
     }
 
-    function abrirDetalleFeed(r, autor) {
-      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
-      const ingredientesHtml = r.ingredientes ? r.ingredientes.split('\n').map(i => `<li style="margin-bottom: 4px;">${i}</li>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes especificados.</p>';
-      const pasosHtml = r.pasos ? r.pasos.split('\n').map(p => `<p style="margin-bottom: 6px; line-height: 1.4;">${p}</p>`).join('') : '<p style="color: var(--text-muted); font-size: 12px;">Sin pasos explicados.</p>';
+ function abrirDetalleFeed(r, autor) {
+  const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
 
-      contenidoDetalle.innerHTML = `
-        ${imgHtml}
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
-            ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
-          </div>
-          <span style="font-size: 13px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
-        </div>
+  contenidoDetalle.innerHTML = `
+    ${imgHtml}
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div style="width: 28px; height: 28px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+        ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
+      </div>
+      <span style="font-size: 13px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
+    </div>
 
-        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
-          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
-        </div>
+    <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+      ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
+    </div>
 
-        <div style="margin-bottom: 16px;">
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.cart || '🛒'} Ingredientes
-          </h4>
-          <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-main); line-height: 1.5;">${ingredientesHtml}</ul>
-        </div>
+    <div style="margin-bottom: 16px;">
+      <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        ${icons.cart || '🛒'} Ingredientes
+      </h4>
+      <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
+    </div>
 
-        <div>
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.chef || '👨‍🍳'} Pasos
-          </h4>
-          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5;">${pasosHtml}</div>
-        </div>
-      `;
+    <div>
+      <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        ${icons.chef || '👨‍🍳'} Pasos
+      </h4>
+      <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
+    </div>
+  `;
 
-      modalDetalle.classList.add('visible');
-    }
+  modalDetalle.classList.add('visible');
+}
 
     async function cargarComunidad(busqueda = '') {
       const termino = busqueda.toLowerCase().trim().replace('@', '');
