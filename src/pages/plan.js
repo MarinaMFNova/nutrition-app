@@ -84,9 +84,6 @@ export function renderPlanView(usuarioActual) {
           </div>
 
           <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="btnAutoPlan" class="btn-primary" style="width: auto; margin:0; padding: 7px 14px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow);">
-              ${icons.settings} Generar Menú Diario
-            </button>
             <button id="btnLimpiarPlan" class="btn-outline" style="width: auto; margin:0; padding: 7px 12px; font-size: 12px; color: var(--danger); display: inline-flex; align-items: center; gap: 4px;" title="Vaciar día actual">
               ${icons.trash} Limpiar Día
             </button>
@@ -511,81 +508,6 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
-  function iniciarGeneracionMenuDiario() {
-    pedirConfirmacion(
-      `Generar Menú para el ${diaSeleccionadoObj.nombreLargo}`,
-      "Se planificarán automáticamente las comidas de este día.",
-      async () => {
-        const btnAuto = container.querySelector('#btnAutoPlan');
-        btnAuto.disabled = true;
-        btnAuto.innerText = 'Generando día...';
-
-        try {
-          function mezclar(array) {
-            let arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-            return arr;
-          }
-
-          const tiposComida = ['Desayuno', 'Comida', 'Merienda', 'Cena'];
-          let asignadosHoy = [];
-
-          for (const tipo of tiposComida) {
-            const aptas = (cacheMisRecetas || []).filter(r => 
-              (r.categorias || '').includes(tipo) && !asignadosHoy.includes(r.id)
-            );
-
-            const { data: existe } = await supabase
-              .from('plan_semanal')
-              .select('id')
-              .eq('user_id', usuarioActual.id)
-              .eq('dia_semana', diaSeleccionadoObj.iso)
-              .eq('comida_tipo', tipo);
-
-            if (!existe || existe.length === 0) {
-              if (aptas.length > 0) {
-                const recetaElegida = mezclar(aptas)[0];
-                asignadosHoy.push(recetaElegida.id);
-
-                await supabase.from('plan_semanal').insert([{
-                  user_id: usuarioActual.id,
-                  dia_semana: diaSeleccionadoObj.iso,
-                  comida_tipo: tipo,
-                  receta_id: recetaElegida.id,
-                  nota_personalizada: null
-                }]);
-              } else {
-                const deCat = (cacheCatalogo || []).filter(c => c.categoria === tipo).map(c => c.nombre);
-                const disponibles = deCat.filter(o => !asignadosHoy.includes(o));
-                const alimentoElegido = disponibles.length > 0 ? mezclar(disponibles)[0] : (deCat.length > 0 ? mezclar(deCat)[0] : 'Comida rápida');
-
-                asignadosHoy.push(alimentoElegido);
-
-                await supabase.from('plan_semanal').insert([{
-                  user_id: usuarioActual.id,
-                  dia_semana: diaSeleccionadoObj.iso,
-                  comida_tipo: tipo,
-                  receta_id: null,
-                  nota_personalizada: alimentoElegido
-                }]);
-              }
-            }
-          }
-
-          cargarMenuDia();
-        } catch (err) {
-          console.error("Error al generar menú diario:", err);
-        } finally {
-          btnAuto.disabled = false;
-          btnAuto.innerHTML = `${icons.settings} Generar Menú Diario`;
-        }
-      }
-    );
-  }
-
   function iniciarLimpiezaMenuDiario() {
     pedirConfirmacion(
       "Vaciar Día",
@@ -603,7 +525,6 @@ export function renderPlanView(usuarioActual) {
   }
 
   setTimeout(() => {
-    container.querySelector('#btnAutoPlan').addEventListener('click', iniciarGeneracionMenuDiario);
     container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenuDiario);
 
     container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => container.querySelector('#modalSelectReceta').classList.remove('visible'));

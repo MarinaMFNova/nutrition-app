@@ -6,7 +6,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   container.className = 'container';
 
   let categoriaFiltro = 'Todos';
-  const listaCategorias = ['Todos', 'Desayuno', 'Comida', 'Cena', 'Postre', 'Batidos', 'Snack'];
+  const listaCategorias = [
+    'Todos', 
+    'Desayuno', 
+    'Comida',
+    'Merienda', 
+    'Cena', 
+    'Salsas', 
+    'Postre', 
+    'Batidos', 
+    'Snack',  
+    'Acompañamientos'
+  ];
 
   container.innerHTML = `
     <!-- CABECERA DE LA PÁGINA -->
@@ -28,10 +39,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       </div>
     </div>
 
-    <!-- CHIPS DE FILTRADO POR CATEGORÍA -->
-    <div id="contenedorChipsFeed" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 20px; scrollbar-width: none;">
+    <!-- CHIPS DE FILTRADO DESLICABLES POR CATEGORÍA -->
+    <div class="filters-scroll-container" id="contenedorChipsFeed">
       ${listaCategorias.map(cat => `
-        <button class="chip-categoria-feed ${cat === 'Todos' ? 'active' : ''}" data-cat="${cat}" style="padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); ${cat === 'Todos' ? 'background: var(--primary); color: white; border-color: var(--primary);' : 'background: var(--input-bg); color: var(--text-muted);'}">
+        <button class="filter-chip ${cat === 'Todos' ? 'active' : ''}" data-cat="${cat}">
           ${cat}
         </button>
       `).join('')}
@@ -99,16 +110,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
     // FILTRADO POR CHIPS DE CATEGORÍA
-    container.querySelectorAll('.chip-categoria-feed').forEach(chip => {
+    container.querySelectorAll('.filter-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        container.querySelectorAll('.chip-categoria-feed').forEach(c => {
-          c.style.background = 'var(--input-bg)';
-          c.style.color = 'var(--text-muted)';
-          c.style.borderColor = 'var(--border)';
-        });
-        chip.style.background = 'var(--primary)';
-        chip.style.color = 'white';
-        chip.style.borderColor = 'var(--primary)';
+        container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
 
         categoriaFiltro = chip.getAttribute('data-cat');
         cargarComunidad(inputBuscar.value);
@@ -388,8 +393,8 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             const nuevaRecetaPayload = {
               user_id: usuarioActual.id,
               nombre: `${recetaOriginal.nombre} (de ${usuarioAutor})`,
-              ingredientes: recetaOriginal.ingredientes || [],
-              pasos: recetaOriginal.pasos || [],
+              ingredientes: recetaOriginal.ingredientes || '',
+              pasos: recetaOriginal.pasos || '',
               tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
               imagen_url: recetaOriginal.imagen_url || null,
               categorias: recetaOriginal.categorias || 'Comida',

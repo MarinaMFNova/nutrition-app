@@ -196,3 +196,4 @@ function cargarVistaPestana(abrirFormulario = false) {
 }
 
 init();
+init();
