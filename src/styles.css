@@ -159,7 +159,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   color: var(--text-main);
-  font-size: 16px; /* 16px mínimo para evitar que iOS haga zoom automático al enfocar inputs */
+  font-size: 16px; /* 16px mínimo para evitar zoom automático en iOS */
   outline: none;
 }
 
@@ -534,16 +534,39 @@ button:hover { background-color: var(--primary-hover); }
   color: var(--text-muted);
 }
 
+/* ESTILOS PARA CENTRAR MODALES EMERGENTES Y EVITAR DESCUADRES */
 .sidebar-overlay {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(2px);
-  z-index: 1000;
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 2000 !important; /* Por encima del sidebar */
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
 }
 
-.sidebar-overlay.visible { display: block; }
+.sidebar-overlay.visible {
+  display: flex !important;
+}
+
+/* CONTENEDOR INTERNO DEL MODAL */
+.modal-dialog-content,
+.sidebar-overlay .card {
+  width: 100% !important;
+  max-width: 500px !important; /* Ancho máximo en escritorio */
+  max-height: 85vh;
+  margin: auto !important;
+  position: relative;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  z-index: 2001 !important;
+}
 
 @media (max-width: 900px) {
   .plan-grid-wrapper {
@@ -608,6 +631,16 @@ button:hover { background-color: var(--primary-hover); }
   .card-receta-feed h3,
   #gridRecetas .card h3 {
     font-size: 13px !important;
+  }
+
+  .sidebar-overlay {
+    padding: 10px !important;
+  }
+  
+  .modal-dialog-content,
+  .sidebar-overlay .card {
+    max-width: 96% !important;
+    padding: 16px !important;
   }
 }
 
