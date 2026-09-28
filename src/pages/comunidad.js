@@ -244,57 +244,45 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       });
     }
 
-    function abrirDetalleFeed(r, autor) {
-      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+  function abrirDetalleFeed(r, autor) {
+    const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
 
-      const listaIngredientesHtml = r.ingredientes
-        ? r.ingredientes.split('\n').filter(l => l.trim()).map(l => `
-            <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-              <span style="color: var(--primary); display: flex; align-items: center; flex-shrink: 0; margin-top: 2px;">
-                ${icons.cart || '🛒'}
-              </span>
-              <span style="font-size: 13px; color: var(--text-main); line-height: 1.4;">${l.trim()}</span>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); font-size: 12px;">Sin ingredientes especificados.</p>';
-
-      contenidoDetalle.innerHTML = `
-        ${imgHtml}
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;" id="btnAbrirPerfilDesdeModal">
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
-            ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
-          </div>
-          <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autor.username || 'usuario'}</span>
+    contenidoDetalle.innerHTML = `
+      ${imgHtml}
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;" id="btnAbrirPerfilDesdeModal">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+          ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
         </div>
+        <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autor.username || 'usuario'}</span>
+      </div>
 
-        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
-          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
-        </div>
+      <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+        ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
+      </div>
 
-        <div style="margin-bottom: 16px;">
-          <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.cart || '🛒'} Ingredientes
-          </h4>
-          <div>${listaIngredientesHtml}</div>
-        </div>
+      <div style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.cart || '🛒'} Ingredientes
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
+      </div>
 
-        <div>
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.chef || '👨‍🍳'} Pasos
-          </h4>
-          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
-        </div>
-      `;
+      <div>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.chef || '👨‍🍳'} Pasos
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
+      </div>
+    `;
 
-      contenidoDetalle.querySelector('#btnAbrirPerfilDesdeModal').addEventListener('click', () => {
-        modalDetalle.classList.remove('visible');
-        abrirPerfilCocinero(autor);
-      });
+    contenidoDetalle.querySelector('#btnAbrirPerfilDesdeModal').addEventListener('click', () => {
+      modalDetalle.classList.remove('visible');
+      abrirPerfilCocinero(autor);
+    });
 
-      modalDetalle.classList.add('visible');
-    }
-
+    modalDetalle.classList.add('visible');
+  }
     async function cargarComunidad(busqueda = '') {
       const termino = busqueda.toLowerCase().trim().replace('@', '');
       const hayBusqueda = termino.length > 0;
