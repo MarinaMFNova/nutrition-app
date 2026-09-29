@@ -687,3 +687,101 @@ div[class*="modal"] {
 }
 
 .hidden { display: none !important; }
+
+/* ==========================================================================
+  ESTILOS DE IMPRESIÓN Y EXPORTACIÓN A PDF (Súper Limpio y Sin Duplicados)
+  ========================================================================== */
+@media print {
+  /* 1. Ocultar la cabecera principal, menú lateral, botones y formularios */
+  .sidebar,
+  .sidebar-overlay,
+  .mobile-toggle-btn,
+  .btn-outline,
+  .container > div:first-child, /* Oculta la cabecera original "Lista de la Compra / Gestiona tus..." */
+  #btnCargarPlan,
+  #btnExportarPDF,
+  #btnCompartirWA,
+  #btnLimpiarLista,
+  #formAddProducto,
+  .card:has(#formAddProducto), /* Oculta toda la tarjeta de "Añadir Producto" */
+  .btn-eliminar-item,
+  button,
+  input[type="checkbox"] {
+    display: none !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+
+  body, html, .layout-container, .main-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .main-content {
+    max-width: 100% !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  /* 2. Cabecera única al principio del documento */
+  .card:has(#contenedorListaCompra)::before {
+    content: "BiteLife — Lista de la Compra";
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: #3aacb8;
+    border-bottom: 2px solid #3aacb8;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+
+  /* 3. Título "Mi Lista" y los productos */
+  .card:has(#contenedorListaCompra) h3 {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #1e293b !important;
+    margin-bottom: 12px !important;
+  }
+
+  #contenedorListaCompra {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  #contenedorListaCompra > div {
+    background: #ffffff !important;
+    border: none !important;
+    border-bottom: 1px dashed #cbd5e1 !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
+  }
+
+  #contenedorListaCompra label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+  }
+
+  #contenedorListaCompra label::before {
+    content: "☐ ";
+    font-size: 15px;
+    margin-right: 8px;
+    color: #3aacb8;
+  }
+
+}

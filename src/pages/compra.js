@@ -1,65 +1,40 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
-// Lista de palabras vacías que NO son ingredientes de compra
-const PALABRAS_VACIAS = [
-  'con', 'del', 'de', 'la', 'los', 'las', 'el', 'un', 'una', 'unos', 'unas',
-  'solo', 'sola', 'solos', 'solas', 'para', 'por', 'sin', 'tipo', 'modo', 'estilo'
+// Unidades de medida y palabras a omitir al limpiar ingredientes
+const UNIDADES_Y_MEDIDAS = [
+  'g', 'gr', 'gramos', 'kg', 'kilos', 'kilo',
+  'ml', 'l', 'litro', 'litros', 'cl',
+  'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas',
+  'taza', 'tazas', 'vaso', 'vasos', 'pizca', 'pizcas',
+  'diente', 'dientes', 'unidad', 'unidades', 'uds', 'ud',
+  'bote', 'botes', 'paquete', 'paquetes', 'lata', 'latas', 'chorrito',
+  'de', 'del', 'los', 'las', 'un', 'una', 'unos', 'unas', 'al', 'a', 'y'
 ];
 
-// Función limpiadora de ingredientes y cantidades
-function limpiarTextoIngrediente(texto) {
-  if (!texto) return '';
+// Función para extraer únicamente el ingrediente limpio
+function limpiarIngrediente(linea) {
+  if (!linea) return '';
 
-  let limpio = texto.toLowerCase();
+  let limpio = linea.toLowerCase().trim();
 
-  // 1. Eliminar cantidades y fracciones (ej: 250, 1.5, 1/2)
+  // 1. Quitar números, decimales y fracciones (ej: 250, 1.5, 1/2)
   limpio = limpio.replace(/\b\d+([.,\/]\d+)?\b/g, '');
 
-  // 2. Eliminar unidades de medida comunes
-  const unidades = [
-    'gr', 'gramos', 'g', 'kg', 'kilos', 'kilo', 
-    'ml', 'l', 'litro', 'litros', 'cl', 
-    'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 
-    'taza', 'tazas', 'vaso', 'vasos', 'pizca', 'pizcas', 
-    'diente', 'dientes', 'unidades', 'unidad', 'uds', 'ud',
-    'bote', 'botes', 'paquete', 'paquetes', 'lata', 'latas', 'chorrito'
-  ];
-  
-  const regexUnidades = new RegExp(`\\b(${unidades.join('|')})\\b`, 'gi');
+  // 2. Quitar unidades de medida y conectores
+  const regexUnidades = new RegExp(`\\b(${UNIDADES_Y_MEDIDAS.join('|')})\\b`, 'gi');
   limpio = limpio.replace(regexUnidades, '');
 
-  // 3. Eliminar caracteres especiales
-  limpio = limpio.replace(/[\(\)\-\*:\.]/g, ' ');
+  // 3. Quitar caracteres especiales (- * : ( ) . , / +)
+  limpio = limpio.replace(/[\(\)\-\*:\.,\/]/g, ' ');
 
-  // 4. Limpiar espacios múltiples
+  // 4. Limpiar espacios sobrantes
   limpio = limpio.trim().replace(/\s+/g, ' ');
 
-  if (!limpio || PALABRAS_VACIAS.includes(limpio)) return '';
+  if (!limpio || limpio.length < 2) return '';
 
+  // Devolver con la primera letra en mayúscula
   return limpio.charAt(0).toUpperCase() + limpio.slice(1);
-}
-
-// Extrae ingredientes individuales descomponiendo frases como "Tostada con aguacate y huevo"
-function extraerIngredientesDeNota(nota) {
-  if (!nota) return [];
-
-  // Separar por conectores como 'con', 'y', '/', ',', '+' o 'de'
-  const partes = nota.split(/\s+(?:con|y|\+|\/|,)\s+|\/|,|\+/i);
-  const resultados = [];
-
-  partes.forEach(p => {
-    let limpia = p.trim();
-    // Si la parte empieza por "tostada de...", "tortitas de...", quitamos el tipo de preparación si procede
-    limpia = limpia.replace(/^(tostada|tostadas|tortita|tortitas|batido|batidos)\s+(de\s+la|del|de)?\s*/gi, '');
-
-    const final = limpiarTextoIngrediente(limpia);
-    if (final && !PALABRAS_VACIAS.includes(final.toLowerCase()) && !resultados.includes(final)) {
-      resultados.push(final);
-    }
-  });
-
-  return resultados;
 }
 
 export function renderCompraView(usuarioActual) {
@@ -70,6 +45,7 @@ export function renderCompraView(usuarioActual) {
   let ingredientesUnicosDisponibles = [];
 
   container.innerHTML = `
+    
     <!-- CABECERA DE LA VISTA -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
       <div>
@@ -132,7 +108,7 @@ export function renderCompraView(usuarioActual) {
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Ingredientes únicos encontrados en tu plan de la semana:</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Ingredientes de las recetas de tu plan semanal:</p>
           <div style="display: flex; gap: 6px;">
             <button id="btnSelectAll" class="btn-outline" style="width: auto; padding: 2px 8px; font-size: 10px; margin:0; border-radius: 6px;">Marcar todos</button>
             <button id="btnUnselectAll" class="btn-outline" style="width: auto; padding: 2px 8px; font-size: 10px; margin:0; border-radius: 6px;">Desmarcar</button>
@@ -223,43 +199,44 @@ export function renderCompraView(usuarioActual) {
       renderizarLista();
     });
 
-    // ABRIR MODAL CON INGREDIENTES ÚNICOS
+    // OBTENER SOLO INGREDIENTES DESGLOSADOS DE LAS RECETAS DEL PLAN
     container.querySelector('#btnCargarPlan').addEventListener('click', async () => {
-      listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Buscando ingredientes en tu plan...</p>';
+      listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Buscando ingredientes en las recetas de tu plan...</p>';
       modalIngredientes.classList.add('visible');
 
       const { data: plan } = await supabase
         .from('plan_semanal')
-        .select('receta_id, nota_personalizada, recetas:receta_id(nombre, ingredientes)')
-        .eq('user_id', usuarioActual.id);
+        .select('receta_id, recetas:receta_id(ingredientes)')
+        .eq('user_id', usuarioActual.id)
+        .not('receta_id', 'is', null); // Filtra solo asignaciones que tengan una receta vinculada
 
       if (!plan || plan.length === 0) {
-        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No tienes recetas o alimentos en tu plan semanal.</p>';
+        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No hay recetas asignadas en tu plan semanal de esta semana.</p>';
         return;
       }
 
       const conjuntoIngredientes = new Set();
 
       plan.forEach(item => {
-        // Caso 1: Ingredientes de Recetas
         if (item.recetas && item.recetas.ingredientes) {
-          const lineas = item.recetas.ingredientes.split('\n');
+          let lineas = [];
+          if (Array.isArray(item.recetas.ingredientes)) {
+            lineas = item.recetas.ingredientes;
+          } else if (typeof item.recetas.ingredientes === 'string') {
+            lineas = item.recetas.ingredientes.split('\n');
+          }
+
           lineas.forEach(l => {
-            const limpio = limpiarTextoIngrediente(l);
-            if (limpio) conjuntoIngredientes.add(limpio);
+            const ingLimpio = limpiarIngrediente(l);
+            if (ingLimpio) conjuntoIngredientes.add(ingLimpio);
           });
-        } 
-        // Caso 2: Alimentos rápidos / notas descompuestas
-        else if (item.nota_personalizada) {
-          const extraidos = extraerIngredientesDeNota(item.nota_personalizada);
-          extraidos.forEach(ing => conjuntoIngredientes.add(ing));
         }
       });
 
       ingredientesUnicosDisponibles = Array.from(conjuntoIngredientes).sort();
 
       if (ingredientesUnicosDisponibles.length === 0) {
-        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No se encontraron ingredientes desglosados en tu plan.</p>';
+        listadoModal.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No se encontraron ingredientes en las recetas de tu plan.</p>';
         return;
       }
 
