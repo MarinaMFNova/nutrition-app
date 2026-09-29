@@ -1,7 +1,7 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
-export function renderPerfilView(usuarioActual, targetUserId = null) {
+export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen = null) {
   const container = document.createElement('div');
   container.className = 'container';
 
@@ -13,7 +13,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null) {
   let mostrandoCambioPass = false;
 
   container.innerHTML = `
-    <!-- CABECERA DE LA PÁGINA CON BOTÓN DE VOLVER -->
+    <!-- CABECERA DE LA PÁGINA CON BOTÓN DE VOLVER INTELIGENTE -->
     <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
       <div>
         <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px;">
@@ -25,10 +25,10 @@ export function renderPerfilView(usuarioActual, targetUserId = null) {
         </p>
       </div>
 
-      <!-- BOTÓN VOLVER (SÓLO SI ESTAMOS EN EL PERFIL DE OTRO USUARIO) -->
+      <!-- BOTÓN VOLVER GENÉRICO (SÓLO SI NO ES TU PROPIO PERFIL) -->
       ${!esMiPerfil ? `
-        <button id="btnVolverMiPerfil" class="btn-outline" style="width: auto; margin: 0; padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
-          ◀ Volver a mi perfil
+        <button id="btnVolverAtras" class="btn-outline" style="width: auto; margin: 0; padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
+          ◀ Volver
         </button>
       ` : ''}
     </div>
@@ -211,14 +211,21 @@ export function renderPerfilView(usuarioActual, targetUserId = null) {
   `;
 
   setTimeout(() => {
-    // EVENTO DEL BOTÓN PARA VOLVER A MI PERFIL
-    const btnVolver = container.querySelector('#btnVolverMiPerfil');
+    // ACCIÓN DEL BOTÓN VOLVER
+    const btnVolver = container.querySelector('#btnVolverAtras');
     if (btnVolver) {
       btnVolver.addEventListener('click', () => {
         const appContent = document.querySelector('.main-content');
         if (appContent) {
           appContent.innerHTML = '';
-          appContent.appendChild(renderPerfilView(usuarioActual, usuarioActual.id));
+
+          // Si el origen fue un elemento o función, lo cargamos. Si no, vuelve a donde proceda.
+          if (typeof vistaOrigen === 'function') {
+            appContent.appendChild(vistaOrigen());
+          } else {
+            // Por defecto, carga la vista previa o renderiza tu perfil si no hay origen guardado
+            appContent.appendChild(renderPerfilView(usuarioActual, usuarioActual.id));
+          }
         }
       });
     }
@@ -618,7 +625,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null) {
             const appContent = document.querySelector('.main-content');
             if (appContent) {
               appContent.innerHTML = '';
-              appContent.appendChild(renderPerfilView(usuarioActual, idTarget));
+              appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
             }
           });
         });
@@ -652,7 +659,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null) {
             const appContent = document.querySelector('.main-content');
             if (appContent) {
               appContent.innerHTML = '';
-              appContent.appendChild(renderPerfilView(usuarioActual, idTarget));
+              appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
             }
           });
         });
