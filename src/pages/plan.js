@@ -115,20 +115,32 @@ export function renderPlanView(usuarioActual) {
       </div>
     </div>
 
-    <!-- MODAL SELECCIÓN DE RECETA -->
-    <div id="modalSelectReceta" class="sidebar-overlay">
-      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">${icons.recetas} Mis Recetas</h3>
-          <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
-        </div>
-
-        <!-- BUSCADOR RÁPIDO DE RECETAS -->
-        <input type="search" id="inputBuscarRecetaModal" placeholder="🔍 Buscar receta..." style="margin-top: 0; margin-bottom: 12px; height: 40px; font-size: 13px;" />
-
-        <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;"></div>
+  <!-- MODAL SELECCIÓN DE RECETA -->
+  <div id="modalSelectReceta" class="sidebar-overlay">
+    <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+          ${icons.recetas} Mis Recetas
+        </h3>
+        <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
       </div>
+
+      <!-- BUSCADOR CON LA LUPA VECTORIAL DE TU SISTEMA -->
+      <div style="position: relative; margin-bottom: 12px; display: flex; align-items: center; width: 100%;">
+        <span style="position: absolute; left: 12px; color: var(--text-muted); display: flex; align-items: center; pointer-events: none;">
+          ${icons.search}
+        </span>
+        <input 
+          type="text" 
+          id="inputBuscarRecetaModal" 
+          placeholder="Buscar receta..." 
+          style="margin: 0; padding-left: 38px; height: 40px; font-size: 13px; width: 100%;" 
+        />
+      </div>
+
+      <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;"></div>
     </div>
+  </div>
 
     <!-- MODAL BUSCADOR DE ALIMENTOS -->
     <div id="modalSearchAlimento" class="sidebar-overlay">
@@ -140,7 +152,7 @@ export function renderPlanView(usuarioActual) {
           <button id="btnCloseModalSearch" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
         </div>
 
-        <input type="text" id="inputSearchAlimento" placeholder="Empieza a escribir (ej: 'Açai', 'Pasta')..." style="margin-top: 0; margin-bottom: 10px; height: 42px;" />
+        <input type="text" id="inputSearchAlimento" placeholder="Buscar alimento..." style="margin-top: 0; margin-bottom: 10px; height: 42px;" />
 
         <div id="listadoSugerencias" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; flex: 1;"></div>
       </div>
