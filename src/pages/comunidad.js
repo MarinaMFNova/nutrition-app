@@ -1,5 +1,6 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
+import { renderPerfilView } from './perfil.js';
 
 export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const container = document.createElement('div');
@@ -66,14 +67,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       </div>
     </div>
 
-    <!-- MODAL PERFIL PÚBLICO DEL COCINERO -->
-    <div id="modalPerfilCocinero" class="sidebar-overlay">
-      <div class="card modal-dialog-content" style="max-width: 520px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
-        <button id="btnClosePerfilCocinero" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
-        <div id="contenidoPerfilCocinero"></div>
-      </div>
-    </div>
-
     <!-- MODAL DETALLE DE RECETA DEL FEED -->
     <div id="modalDetalleFeed" class="sidebar-overlay">
       <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
@@ -103,10 +96,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const secUsuarios = container.querySelector('#secUsuariosEncontrados');
     const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
 
-    const modalPerfil = container.querySelector('#modalPerfilCocinero');
-    const contenidoPerfil = container.querySelector('#contenidoPerfilCocinero');
-    const btnClosePerfil = container.querySelector('#btnClosePerfilCocinero');
-
     const modalDetalle = container.querySelector('#modalDetalleFeed');
     const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
     const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
@@ -121,8 +110,14 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
     modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
-    btnClosePerfil.addEventListener('click', () => modalPerfil.classList.remove('visible'));
-    modalPerfil.addEventListener('click', (e) => { if (e.target === modalPerfil) modalPerfil.classList.remove('visible'); });
+    // FUNCIÓN PARA NAVEGAR AL PERFIL DEL USUARIO
+    function irAlPerfilCocinero(userId) {
+      const appContent = document.querySelector('.main-content');
+      if (appContent && userId) {
+        appContent.innerHTML = '';
+        appContent.appendChild(renderPerfilView(usuarioActual, userId, () => renderComunidadView(usuarioActual, onRecetaImportada)));
+      }
+    }
 
     // FILTRADO POR CHIPS DE CATEGORÍA
     container.querySelectorAll('.filter-chip').forEach(chip => {
@@ -150,95 +145,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       }
 
       modalNotif.classList.add('visible');
-    }
-
-    async function abrirPerfilCocinero(perfil) {
-      contenidoPerfil.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando perfil...</p>';
-      modalPerfil.classList.add('visible');
-
-      const { data: recetasUsuario } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('user_id', perfil.id)
-        .eq('es_publica', true)
-        .order('created_at', { ascending: false });
-
-      const listaRecetas = recetasUsuario || [];
-
-      const gridRecetasPerfil = listaRecetas.length > 0
-        ? listaRecetas.map(r => `
-            <div class="card" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />` : ''}
-                <h4 style="margin: 0 0 2px 0; font-size: 13px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
-                <p style="margin: 0; font-size: 10px; color: var(--text-muted);">⏱ ${r.tiempo_preparacion || 15} min</p>
-              </div>
-              <button class="btn-importar-perfil btn-outline" data-id="${r.id}" style="width: 100%; padding: 4px 8px; font-size: 10px; font-weight: 700; border-radius: 6px; margin-top: 8px;">
-                + Guardar
-              </button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); font-size: 12px; grid-column: 1/-1;">Este usuario aún no tiene recetas públicas.</p>';
-
-      contenidoPerfil.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-          <div style="width: 52px; height: 52px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; overflow: hidden; flex-shrink: 0;">
-            ${perfil.avatar_url ? `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (perfil.username || 'U').charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h2 style="margin: 0 0 2px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">${perfil.nombre_completo || perfil.username}</h2>
-            <div style="font-size: 12px; font-weight: 700; color: var(--primary);">@${perfil.username}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${listaRecetas.length} recetas públicas</div>
-          </div>
-        </div>
-
-        <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Recetas públicas</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px;">
-          ${gridRecetasPerfil}
-        </div>
-      `;
-
-      contenidoPerfil.querySelectorAll('.btn-importar-perfil').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const rId = btn.getAttribute('data-id');
-          const rSel = listaRecetas.find(item => item.id === rId);
-          if (!rSel) return;
-
-          btn.disabled = true;
-          btn.innerText = 'Guardando...';
-
-          const payload = {
-            user_id: usuarioActual.id,
-            nombre: `${rSel.nombre} (de @${perfil.username})`,
-            ingredientes: rSel.ingredientes || '',
-            pasos: rSel.pasos || '',
-            tiempo_preparacion: rSel.tiempo_preparacion || 15,
-            imagen_url: rSel.imagen_url || null,
-            categorias: rSel.categorias || 'Comida',
-            es_publica: false
-          };
-
-          const { error } = await supabase.from('recetas').insert([payload]);
-
-          if (!error) {
-            btn.innerText = '¡Guardada!';
-            if (perfil.id !== usuarioActual.id) {
-              await supabase.from('notificaciones').insert([{
-                user_id: perfil.id,
-                emisor_id: usuarioActual.id,
-                tipo: 'receta_guardada',
-                referencia: rSel.nombre,
-                leida: false
-              }]);
-            }
-            if (onRecetaImportada) onRecetaImportada();
-          } else {
-            btn.disabled = false;
-            btn.innerText = '+ Guardar';
-            alert('Error: ' + error.message);
-          }
-        });
-      });
     }
 
     function abrirDetalleFeed(r, autor) {
@@ -275,7 +181,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
       contenidoDetalle.querySelector('#btnAbrirPerfilDesdeModal').addEventListener('click', () => {
         modalDetalle.classList.remove('visible');
-        abrirPerfilCocinero(autor);
+        irAlPerfilCocinero(autor.id);
       });
 
       modalDetalle.classList.add('visible');
@@ -338,8 +244,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           gridUsuarios.querySelectorAll('.area-click-perfil').forEach(area => {
             area.addEventListener('click', () => {
               const pId = area.getAttribute('data-id');
-              const perfilSel = perfilesEncontrados.find(item => item.id === pId);
-              if (perfilSel) abrirPerfilCocinero(perfilSel);
+              if (pId) irAlPerfilCocinero(pId);
             });
           });
 
@@ -436,7 +341,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;" class="click-autor-header" data-autorid="${autor.id}">
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; width: fit-content;" class="click-autor-header" data-autorid="${autor.id}">
                 <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
                   ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
                 </div>
@@ -475,8 +380,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           if (headerAutor) {
             e.stopPropagation();
             const autorId = headerAutor.getAttribute('data-autorid');
-            const autorSel = mapaAutores[autorId];
-            if (autorSel) abrirPerfilCocinero(autorSel);
+            if (autorId) irAlPerfilCocinero(autorId);
             return;
           }
 
