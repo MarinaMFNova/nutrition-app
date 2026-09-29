@@ -243,7 +243,7 @@ button:hover { background-color: var(--primary-hover); }
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  z-index: 1005 !important; /* Por encima de la capa de fondo del menú */
+  z-index: 1005 !important;
   overflow: hidden;
   transition: width 0.3s ease, padding 0.3s ease, transform 0.3s ease;
 }
@@ -546,33 +546,49 @@ button:hover { background-color: var(--primary-hover); }
   display: block; 
 }
 
-/* OVERLAY Y MODALES EMERGENTES (DETALLE DE RECETA, PERFIL, AVISOS) */
+/* OVERLAY DE CUALQUIER MODAL EMERGENTE (DETALLE DE RECETA, ELIMINAR, PERFIL) */
 .modal-overlay,
-.sidebar-overlay:has(.modal-dialog-content) {
+div[id*="modal"],
+div[class*="modal"] {
+  z-index: 2000;
+}
+
+/* SOBREESCRIBE EL COMPORTAMIENTO DE TODAS LAS CAPAS OSCURAS DE MODALES */
+.modal-overlay,
+.sidebar-overlay:has(.modal-dialog-content),
+.sidebar-overlay:has(.card) {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.5) !important;
   backdrop-filter: blur(4px);
   z-index: 2000 !important;
-  align-items: center;
-  justify-content: center;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 16px;
   overflow-y: auto;
 }
 
-.sidebar-overlay:has(.modal-dialog-content).visible {
+.modal-overlay.visible,
+.sidebar-overlay:has(.modal-dialog-content).visible,
+.sidebar-overlay:has(.card).visible {
   display: flex !important;
 }
 
-.modal-dialog-content {
+/* LIMITA EL ANCHO Y CENTRA CUALQUIER TARJETA/MODAL EN ESCRITORIO */
+.modal-dialog-content,
+.modal-overlay .card,
+.sidebar-overlay .card {
   width: 100% !important;
-  max-width: 500px !important;
+  max-width: 460px !important; /* Ancho elegante para PC */
   max-height: 85vh;
   margin: auto !important;
   position: relative;
   border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25) !important;
   z-index: 2001 !important;
 }
 
@@ -640,8 +656,11 @@ button:hover { background-color: var(--primary-hover); }
     font-size: 13px !important;
   }
 
-  .modal-dialog-content {
-    max-width: 96% !important;
+  /* MODALES AJUSTADOS EN MÓVIL */
+  .modal-dialog-content,
+  .modal-overlay .card,
+  .sidebar-overlay .card {
+    max-width: 95% !important;
     padding: 16px !important;
   }
 }
