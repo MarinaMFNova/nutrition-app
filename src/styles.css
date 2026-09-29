@@ -578,18 +578,39 @@ div[class*="modal"] {
   display: flex !important;
 }
 
-/* LIMITA EL ANCHO Y CENTRA CUALQUIER TARJETA/MODAL EN ESCRITORIO */
+/* CONTENEDOR PRINCIPAL DEL MODAL (VENTANA) EN ESCRITORIO */
 .modal-dialog-content,
-.modal-overlay .card,
-.sidebar-overlay .card {
+.modal-overlay > .card,
+.sidebar-overlay > .card {
   width: 100% !important;
   max-width: 460px !important; /* Ancho elegante para PC */
   max-height: 85vh;
   margin: auto !important;
   position: relative;
   border-radius: 20px;
+  background-color: var(--card-bg) !important;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25) !important;
   z-index: 2001 !important;
+}
+
+/* LIMPIEZA ABSOLUTA DE TARJETAS E ÍTEMS DENTRO DE LOS LISTADOS DE LOS MODALES */
+#listadoModalRecetas .card,
+#listadoModalRecetas .item-receta-modal,
+#listadoSugerencias .card {
+  background-color: var(--card-bg) !important;
+  box-shadow: none !important; /* Elimina cualquier halo/fondo gris heredado */
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  margin-bottom: 0 !important;
+  transition: all 0.2s ease;
+}
+
+/* EFFECT HOVER LIMPIO AL PASAR EL RATÓN O PULSAR */
+#listadoModalRecetas .card:hover,
+#listadoModalRecetas .item-receta-modal:hover,
+#listadoSugerencias .card:hover {
+  border-color: var(--primary) !important;
+  background-color: var(--primary-light) !important;
 }
 
 @media (max-width: 900px) {
@@ -658,8 +679,8 @@ div[class*="modal"] {
 
   /* MODALES AJUSTADOS EN MÓVIL */
   .modal-dialog-content,
-  .modal-overlay .card,
-  .sidebar-overlay .card {
+  .modal-overlay > .card,
+  .sidebar-overlay > .card {
     max-width: 95% !important;
     padding: 16px !important;
   }

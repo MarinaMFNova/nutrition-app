@@ -117,12 +117,16 @@ export function renderPlanView(usuarioActual) {
 
     <!-- MODAL SELECCIÓN DE RECETA -->
     <div id="modalSelectReceta" class="sidebar-overlay">
-      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">${icons.recetas} Mis Recetas</h3>
           <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
         </div>
-        <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+        <!-- BUSCADOR RÁPIDO DE RECETAS -->
+        <input type="search" id="inputBuscarRecetaModal" placeholder="🔍 Buscar receta..." style="margin-top: 0; margin-bottom: 12px; height: 40px; font-size: 13px;" />
+
+        <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;"></div>
       </div>
     </div>
 
@@ -375,7 +379,9 @@ export function renderPlanView(usuarioActual) {
         tipoComidaSeleccionado = tipo.id;
         const modal = container.querySelector('#modalSelectReceta');
         const listado = container.querySelector('#listadoModalRecetas');
+        const inputBuscar = container.querySelector('#inputBuscarRecetaModal');
 
+        inputBuscar.value = '';
         listado.innerHTML = '';
 
         if (!misRecetas || misRecetas.length === 0) {
@@ -383,11 +389,11 @@ export function renderPlanView(usuarioActual) {
         } else {
           misRecetas.forEach(r => {
             const item = document.createElement('div');
-            item.className = 'card';
+            item.className = 'card item-receta-modal';
             item.style.cssText = 'padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s;';
             item.innerHTML = `
               <div>
-                <div style="font-weight: 700; font-size: 14px;">${r.nombre}</div>
+                <div style="font-weight: 700; font-size: 14px;" class="nombre-receta-modal">${r.nombre}</div>
                 <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min</div>
               </div>
               <span style="color: var(--primary); font-size: 18px; font-weight: 800;">+</span>
@@ -410,6 +416,7 @@ export function renderPlanView(usuarioActual) {
         }
 
         modal.classList.add('visible');
+        setTimeout(() => inputBuscar.focus(), 100);
       });
 
       card.querySelector('.btn-add-alimento').addEventListener('click', () => {
@@ -525,6 +532,24 @@ export function renderPlanView(usuarioActual) {
   }
 
   setTimeout(() => {
+    // FILTRADO EN TIEMPO REAL DEL BUSCADOR DE MIS RECETAS EN EL MODAL
+    const inputBuscarReceta = container.querySelector('#inputBuscarRecetaModal');
+    if (inputBuscarReceta) {
+      inputBuscarReceta.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const items = container.querySelectorAll('#listadoModalRecetas .item-receta-modal');
+
+        items.forEach(item => {
+          const nombre = item.querySelector('.nombre-receta-modal').textContent.toLowerCase();
+          if (nombre.includes(query)) {
+            item.style.setProperty('display', 'flex', 'important');
+          } else {
+            item.style.setProperty('display', 'none', 'important');
+          }
+        });
+      });
+    }
+
     container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenuDiario);
 
     container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => container.querySelector('#modalSelectReceta').classList.remove('visible'));
@@ -551,6 +576,7 @@ export function renderPlanView(usuarioActual) {
     container.querySelector('#btnSemanaSiguiente').addEventListener('click', () => {
       lunesSemana.setDate(lunesSemana.getDate() + 7);
       diasCalculados = generarDiasSemana(lunesSemana);
+      diaSeleccionadoObj.iso;
       diaSeleccionadoObj = diasCalculados[0];
       miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
       actualizarEncabezado();
