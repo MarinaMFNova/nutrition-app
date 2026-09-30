@@ -151,6 +151,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
       const esCompartida = autorOriginal && autorOriginal.id !== r.user_id;
 
+      // ICONO VECTORIAL PARA EL MODAL DE DETALLE
+      const svgRepeat = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+
       contenidoDetalle.innerHTML = `
         ${imgHtml}
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
@@ -160,17 +163,12 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             </div>
             <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autorPublicador.username || 'usuario'}</span>
           </div>
-
-          ${esCompartida ? `
-            <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); white-space: nowrap; flex-shrink: 0;">
-              Compartida
-            </span>
-          ` : ''}
         </div>
 
         ${esCompartida ? `
-          <div id="btnAbrirPerfilOriginalModal" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 14px; cursor: pointer;">
-            <span style="font-size: 11px; color: var(--text-muted);">Receta creada por:</span>
+          <div id="btnAbrirPerfilOriginalModal" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 14px; cursor: pointer; border: 1px solid var(--border);">
+            <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
+            <span style="font-size: 11px; color: var(--text-muted);">Creada por:</span>
             <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username}</span>
           </div>
         ` : ''}
@@ -364,6 +362,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         return;
       }
 
+      // ICONO VECTORIAL SVG DE "REPOST / SHARE"
+      const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+
       gridFeed.innerHTML = recetasFiltradas.map(r => {
         const autorPublicador = mapaPerfiles[r.user_id] || {};
         const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
@@ -378,7 +379,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
-              <!-- AUTOR PUBLICADOR Y BADGE COMPARTIDA RESPONSIVO -->
+              <!-- AUTOR PUBLICADOR -->
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px;">
                 <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;" class="click-autor-header" data-autorid="${autorPublicador.id}">
                   <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
@@ -388,18 +389,13 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
                     @${autorPublicador.username || 'usuario'}
                   </span>
                 </div>
-
-                ${esCompartida ? `
-                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); white-space: nowrap; flex-shrink: 0;">
-                    Compartida
-                  </span>
-                ` : ''}
               </div>
 
-              <!-- CREADOR ORIGINAL -->
+              <!-- CREADOR ORIGINAL CON ICONO VECTORIAL SVG -->
               ${esCompartida ? `
-                <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
-                  <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
+                <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 5px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
+                  <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
+                  <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
                   <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
                 </div>
               ` : ''}
