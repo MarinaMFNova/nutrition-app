@@ -27,51 +27,52 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
       <!-- BOTÓN VOLVER GENÉRICO (SÓLO SI NO ES TU PROPIO PERFIL) -->
       ${!esMiPerfil ? `
-        <button id="btnVolverAtras" class="btn-outline" style="width: auto; margin: 0; padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
+        <button id="btnVolverAtras" class="btn-outline" style="width: auto; margin: 0; padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
           ◀ Volver
         </button>
       ` : ''}
     </div>
 
-    <!-- HEADER PERFIL SOCIAL -->
-    <div class="card" style="padding: 28px; border-radius: 20px; margin-bottom: 24px;">
+    <!-- HEADER PERFIL SOCIAL RESPONSIVO -->
+    <div class="card" style="padding: 24px; border-radius: 20px; margin-bottom: 24px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
         
-        <div style="display: flex; align-items: center; gap: 20px;">
-          <div id="avatarContainer" style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
+        <div style="display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1;">
+          <div id="avatarContainer" style="width: 76px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
             ${icons.user}
           </div>
-          <div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 22px; font-weight: 800; color: var(--text-main);">Cargando...</h2>
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">Cargando...</h2>
+              
               ${esMiPerfil ? `
-                <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
                   ${icons.settings} Editar Perfil
                 </button>
               ` : `
-                <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 16px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px;">
+                <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 16px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; white-space: nowrap; flex-shrink: 0;">
                   Seguir
                 </button>
               `}
             </div>
-            <div id="lblUsername" style="font-size: 14px; font-weight: 700; color: var(--primary); margin-top: 2px;">@...</div>
-            <div id="lblEmail" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;"></div>
+            <div id="lblUsername" style="font-size: 14px; font-weight: 700; color: var(--primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@...</div>
+            <div id="lblEmail" style="font-size: 12px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
           </div>
         </div>
 
         <!-- CONTADORES SOCIALES -->
-        <div style="display: flex; gap: 24px; text-align: center;">
+        <div style="display: flex; gap: 20px; text-align: center; flex-wrap: wrap; justify-content: flex-start;">
           <div style="cursor: pointer;" id="btnVerSeguidores">
-            <div id="cntSeguidores" style="font-size: 20px; font-weight: 800; color: var(--text-main);">0</div>
-            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Seguidores</div>
+            <div id="cntSeguidores" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
+            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Seguidores</div>
           </div>
           <div style="cursor: pointer;" id="btnVerSiguiendo">
-            <div id="cntSiguiendo" style="font-size: 20px; font-weight: 800; color: var(--text-main);">0</div>
-            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Siguiendo</div>
+            <div id="cntSiguiendo" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
+            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Siguiendo</div>
           </div>
           <div>
-            <div id="cntRecetasPublicas" style="font-size: 20px; font-weight: 800; color: var(--primary);">0</div>
-            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Recetas Públicas</div>
+            <div id="cntRecetasPublicas" style="font-size: 18px; font-weight: 800; color: var(--primary);">0</div>
+            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Recetas Públicas</div>
           </div>
         </div>
 
@@ -80,10 +81,10 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
     <!-- PESTAÑAS -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-      <button id="tabBtnMisPublicas" class="btn-outline" style="width: auto; padding: 8px 18px; margin: 0; font-size: 13px; font-weight: 700; border-radius: 10px; background: var(--primary-light); color: var(--primary); border-color: var(--primary); display: flex; align-items: center; gap: 6px;">
+      <button id="tabBtnMisPublicas" class="btn-outline" style="width: auto; padding: 8px 16px; margin: 0; font-size: 13px; font-weight: 700; border-radius: 10px; background: var(--primary-light); color: var(--primary); border-color: var(--primary); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
         ${icons.globe} Recetas Públicas
       </button>
-      <button id="tabBtnListaSeguidores" class="btn-outline" style="width: auto; padding: 8px 18px; margin: 0; font-size: 13px; font-weight: 700; border-radius: 10px; display: flex; align-items: center; gap: 6px;">
+      <button id="tabBtnListaSeguidores" class="btn-outline" style="width: auto; padding: 8px 16px; margin: 0; font-size: 13px; font-weight: 700; border-radius: 10px; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
         ${icons.users} Seguidores / Siguiendo
       </button>
     </div>
@@ -97,15 +98,15 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
     <!-- SECCIÓN 2: LISTAS SOCIALES DE ESTE PERFIL -->
     <div id="secListaSeguidores" class="hidden">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-        <div class="card" style="padding: 20px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+        <div class="card" style="padding: 18px;">
           <h3 style="margin-top: 0; font-size: 15px; color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 6px;">
             ${icons.users} Personas que le siguen
           </h3>
           <div id="listaSeguidoresMeSiguen" style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;"></div>
         </div>
 
-        <div class="card" style="padding: 20px;">
+        <div class="card" style="padding: 18px;">
           <h3 style="margin-top: 0; font-size: 15px; color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 6px;">
             ${icons.users} Personas a las que sigue
           </h3>
@@ -218,12 +219,9 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         const appContent = document.querySelector('.main-content');
         if (appContent) {
           appContent.innerHTML = '';
-
-          // Si el origen fue un elemento o función, lo cargamos. Si no, vuelve a donde proceda.
           if (typeof vistaOrigen === 'function') {
             appContent.appendChild(vistaOrigen());
           } else {
-            // Por defecto, carga la vista previa o renderiza tu perfil si no hay origen guardado
             appContent.appendChild(renderPerfilView(usuarioActual, usuarioActual.id));
           }
         }
@@ -567,74 +565,76 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       const grid = container.querySelector('#gridMisPublicas');
       grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando...</p>';
 
-      const { data: publicas } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('user_id', perfilId)
-        .eq('es_publica', true)
-        .order('created_at', { ascending: false });
-
-      if (!publicas || publicas.length === 0) {
-        grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
-        return;
-      }
-
-      // RECOPILAR IDS DE AUTORES ORIGINARIOS (SI EXISTEN RECETAS COMPARTIDAS)
-      const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
-      const mapaAutoresOriginales = {};
-
-      if (idsAutoresOriginales.length > 0) {
-        const { data: perfilesOriginales } = await supabase
-          .from('perfiles')
+      try {
+        const { data: publicas, error: errPublicas } = await supabase
+          .from('recetas')
           .select('*')
-          .in('id', idsAutoresOriginales);
+          .eq('user_id', perfilId)
+          .eq('es_publica', true)
+          .order('created_at', { ascending: false });
 
-        (perfilesOriginales || []).forEach(p => {
-          mapaPerfilesOriginales[p.id] = p;
-        });
-      }
+        if (errPublicas) throw errPublicas;
 
-      grid.innerHTML = publicas.map(r => {
-        const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
-        const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+        if (!publicas || publicas.length === 0) {
+          grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
+          return;
+        }
 
-        return `
-          <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
-              
-              ${esCompartida ? `
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border);">
-                    Compartida
-                  </span>
-                </div>
-                <div class="btn-ver-perfil-creador-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
-                  <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
-                  <span style="font-size: 11px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
-                </div>
-              ` : ''}
+        // RECOPILAR IDS DE AUTORES ORIGINARIOS (SI EXISTEN RECETAS COMPARTIDAS)
+        const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
+        const mapaAutoresOriginales = {};
 
-              <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
-              <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
+        if (idsAutoresOriginales.length > 0) {
+          const { data: perfilesOriginales } = await supabase
+            .from('perfiles')
+            .select('*')
+            .in('id', idsAutoresOriginales);
+
+          (perfilesOriginales || []).forEach(p => {
+            mapaAutoresOriginales[p.id] = p; // CORREGIDO: mapaAutoresOriginales
+          });
+        }
+
+        grid.innerHTML = publicas.map(r => {
+          const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
+          const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+
+          return `
+            <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
+                
+                ${esCompartida ? `
+                  <div class="btn-ver-perfil-creador-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
+                    <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
+                    <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
+                  </div>
+                ` : ''}
+
+                <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
+                <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
+              </div>
             </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
 
-      grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const autorId = btn.getAttribute('data-autorid');
-          if (autorId) {
-            const appContent = document.querySelector('.main-content');
-            if (appContent) {
-              appContent.innerHTML = '';
-              appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+        grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const autorId = btn.getAttribute('data-autorid');
+            if (autorId) {
+              const appContent = document.querySelector('.main-content');
+              if (appContent) {
+                appContent.innerHTML = '';
+                appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+              }
             }
-          }
+          });
         });
-      });
+      } catch (err) {
+        console.error("Error cargando recetas públicas del perfil:", err);
+        grid.innerHTML = '<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las recetas de este perfil.</p>';
+      }
     }
 
     async function cargarListasSociales() {
@@ -661,13 +661,13 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
         divMeSiguen.innerHTML = (perfilesSeguidores || []).map(p => `
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" class="btn-ver-perfil-item" data-id="${p.id}">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
                 ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
               </div>
-              <div>
-                <div style="font-weight: 800; font-size: 13px; color: var(--text-main);">${p.nombre_completo || p.username}</div>
-                <div style="font-size: 11px; color: var(--primary); font-weight: 700;">@${p.username}</div>
+              <div style="min-width: 0;">
+                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
+                <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
               </div>
             </div>
           </div>
@@ -694,16 +694,16 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
         divYoSigo.innerHTML = (perfilesSiguiendo || []).map(p => `
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" class="btn-ver-perfil-item" data-id="${p.id}">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
                 ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
               </div>
-              <div>
-                <div style="font-weight: 800; font-size: 13px; color: var(--text-main);">${p.nombre_completo || p.username}</div>
-                <div style="font-size: 11px; color: var(--primary); font-weight: 700;">@${p.username}</div>
+              <div style="min-width: 0;">
+                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
+                <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
               </div>
             </div>
-            ${esMiPerfil ? `<button class="btn-unfollow btn-outline" data-id="${p.id}" style="width: auto; padding: 4px 10px; font-size: 11px; margin: 0; color: var(--danger);">Dejar de seguir</button>` : ''}
+            ${esMiPerfil ? `<button class="btn-unfollow btn-outline" data-id="${p.id}" style="width: auto; padding: 4px 10px; font-size: 11px; margin: 0; color: var(--danger); white-space: nowrap; flex-shrink: 0;">Dejar de seguir</button>` : ''}
           </div>
         `).join('');
 
