@@ -33,33 +33,34 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       ` : ''}
     </div>
 
-    <!-- HEADER PERFIL SOCIAL ADAPTADO A MÓVIL Y PC -->
+    <!-- HEADER PERFIL SOCIAL -->
     <div class="card" style="padding: 20px; border-radius: 20px; margin-bottom: 24px;">
       <div style="display: flex; flex-direction: column; gap: 20px;">
         
-        <!-- BLOQUE SUPERIOR: AVATAR + NOMBRE + BOTÓN -->
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; width: 100%;">
+        <!-- BLOQUE SUPERIOR: AVATAR + DATOS + BOTÓN COMPACTO -->
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; width: 100%;">
           
           <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
-            <div id="avatarContainer" style="width: 68px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
+            <div id="avatarContainer" style="width: 76px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
               ${icons.user}
             </div>
             
             <div style="min-width: 0; flex: 1;">
               <h2 id="lblNombreCompleto" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main); line-height: 1.2; word-break: break-word;">Cargando...</h2>
-              <div id="lblUsername" style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@...</div>
-              <div id="lblEmail" style="font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+              <div id="lblUsername" style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 2px;">@...</div>
+              <!-- CORREO COMPLETO SIN RECORTE -->
+              <div id="lblEmail" style="font-size: 11px; color: var(--text-muted); margin-top: 2px; word-break: break-all; line-height: 1.3;"></div>
             </div>
           </div>
 
-          <!-- BOTÓN EDICIÓN / SEGUIMIENTO EN LÍNEA/COLUMNA CÓMODA -->
+          <!-- BOTÓN COMPACTADO A SOLO "EDITAR" PARA GANAR ESPACIO -->
           <div style="flex-shrink: 0;">
             ${esMiPerfil ? `
-              <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                ${icons.settings} Editar Perfil
+              <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                ${icons.settings} Editar
               </button>
             ` : `
-              <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 18px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; white-space: nowrap;">
+              <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 16px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; white-space: nowrap;">
                 Seguir
               </button>
             `}
@@ -67,7 +68,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
         </div>
 
-        <!-- BLOQUE INFERIOR: CONTADORES SOCIALES (SEPARADOS Y CENTRADOS EN MÓVIL) -->
+        <!-- BLOQUE INFERIOR: CONTADORES SOCIALES -->
         <div style="display: flex; justify-content: space-around; align-items: center; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; width: 100%;">
           <div style="cursor: pointer; flex: 1;" id="btnVerSeguidores">
             <div id="cntSeguidores" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
