@@ -2,7 +2,6 @@ import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 import { renderPerfilView } from './perfil.js';
 
-// ⚡ VARIABLE EN MEMORIA PARA CONSERVAR EL ESTADO ENTRE CAMBIOS DE PESTAÑA
 let cacheComunidadMemoria = null;
 
 export function renderComunidadView(usuarioActual, onRecetaImportada) {
@@ -210,17 +209,41 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     modalDetalle.classList.add('visible');
   }
 
-  function renderizarListaFeed(recetasFiltradas, mapaPerfiles) {
+  function renderizarListaFeed(recetasFiltradas, mapaPerfiles, misRecetasGuardadas = []) {
     const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+
+    // SET CON LOS IDS DE RECETAS P PADRES GUARDADAS
+    const idsGuardados = new Set();
+    misRecetasGuardadas.forEach(myR => {
+      if (myR.receta_original_id) idsGuardados.add(myR.receta_original_id);
+      if (myR.id) idsGuardados.add(myR.id);
+    });
 
     gridFeed.innerHTML = recetasFiltradas.map(r => {
       const autorPublicador = mapaPerfiles[r.user_id] || {};
       const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
       const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
 
+      // COMPROBAMOS SI EL USUARIO ACTUAL YA TIENE GUARDADA ESTA RECETA
+      const idReferenciaOriginal = r.receta_original_id || r.id;
+      const yaGuardada = idsGuardados.has(r.id) || idsGuardados.has(idReferenciaOriginal);
+
       const listaIngredientes = r.ingredientes 
         ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
         : 'Sin ingredientes especificados';
+
+      // BOTÓN DE ACCIÓN SEGÚN EL ESTADO DE GUARDADO
+      const btnGuardarHtml = yaGuardada ? `
+        <button disabled class="btn-outline" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--input-bg); color: var(--primary); border: 1px solid var(--primary-light); cursor: default; opacity: 0.9;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Guardada</span>
+        </button>
+      ` : `
+        <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Guardar en Mis Recetas</span>
+        </button>
+      `;
 
       return `
         <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
@@ -262,10 +285,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             </div>
           </div>
 
-          <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Guardar en Mis Recetas</span>
-          </button>
+          ${btnGuardarHtml}
         </div>
       `;
     }).join('');
@@ -360,7 +380,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           }
 
           mostrarAvisoModal('¡Receta Guardada!', `"${nombreLimpio}" de ${tagCreador} se ha añadido a tus recetas.`);
-          btn.innerText = '¡Guardada!';
+          
+          // RECARGAR COMUNIDAD PARA ACTUALIZAR EL BOTÓN A "GUARDADA"
+          cargarComunidad(inputBuscar.value, true);
 
           if (onRecetaImportada) onRecetaImportada();
 
@@ -378,22 +400,25 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const termino = busqueda.toLowerCase().trim().replace('@', '');
     const hayBusqueda = termino.length > 0;
 
-    // ⚡ PASO 1: SI TENEMOS CACHÉ EN MEMORIA Y NO HAY BÚSQUEDA / FILTRO, RENDERIZAR EN 0 MS
+    // RENDERIZADO DESDE MEMORIA
     if (cacheComunidadMemoria && !hayBusqueda && categoriaFiltro === 'Todos' && !forzarRecarga) {
-      renderizarListaFeed(cacheComunidadMemoria.recetasFiltradas, cacheComunidadMemoria.mapaPerfiles);
+      renderizarListaFeed(cacheComunidadMemoria.recetasFiltradas, cacheComunidadMemoria.mapaPerfiles, cacheComunidadMemoria.misRecetasGuardadas);
     } else if (!cacheComunidadMemoria || hayBusqueda || categoriaFiltro !== 'Todos') {
       gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
     }
 
     try {
-      // ⚡ PASO 2: CONSULTA EN SEGUNDO PLANO A SUPABASE
-      const [resRelaciones, resRecetas] = await Promise.all([
+      // ⚡ CONSULTA PARALELA: SEGUIDOS, RECETAS PÚBLICAS Y MIS PROPIAS RECETAS PARA VERIFICAR GUARDADAS
+      const [resRelaciones, resRecetas, resMisRecetas] = await Promise.all([
         supabase.from('seguidores').select('seguido_id, estado').eq('seguidor_id', usuarioActual.id),
         supabase.from('recetas')
           .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url')
           .eq('es_publica', true)
           .order('created_at', { ascending: false })
-          .limit(20)
+          .limit(20),
+        supabase.from('recetas')
+          .select('id, receta_original_id')
+          .eq('user_id', usuarioActual.id)
       ]);
 
       if (resRecetas.error) throw resRecetas.error;
@@ -405,6 +430,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       });
 
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
+      const misRecetasGuardadas = resMisRecetas.data || [];
 
       // BUSCADOR
       if (hayBusqueda) {
@@ -484,12 +510,11 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         return;
       }
 
-      // ⚡ GUARDAR EN MEMORIA PARA CAMBIOS RÁPIDOS DE PESTAÑA
       if (!hayBusqueda && categoriaFiltro === 'Todos') {
-        cacheComunidadMemoria = { recetasFiltradas, mapaPerfiles };
+        cacheComunidadMemoria = { recetasFiltradas, mapaPerfiles, misRecetasGuardadas };
       }
 
-      renderizarListaFeed(recetasFiltradas, mapaPerfiles);
+      renderizarListaFeed(recetasFiltradas, mapaPerfiles, misRecetasGuardadas);
 
     } catch (err) {
       console.error("Error al cargar la comunidad:", err);
