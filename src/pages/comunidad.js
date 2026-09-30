@@ -162,7 +162,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           </div>
 
           ${esCompartida ? `
-            <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);">
+            <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); white-space: nowrap; flex-shrink: 0;">
               Compartida
             </span>
           ` : ''}
@@ -378,17 +378,19 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
-              <!-- AUTOR PUBLICADOR -->
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <div style="display: flex; align-items: center; gap: 6px; width: fit-content;" class="click-autor-header" data-autorid="${autorPublicador.id}">
+              <!-- AUTOR PUBLICADOR Y BADGE COMPARTIDA RESPONSIVO -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;" class="click-autor-header" data-autorid="${autorPublicador.id}">
                   <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
                     ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
                   </div>
-                  <span style="font-size: 11px; font-weight: 700; color: #2ba8a8;">@${autorPublicador.username || 'usuario'}</span>
+                  <span style="font-size: 11px; font-weight: 700; color: #2ba8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    @${autorPublicador.username || 'usuario'}
+                  </span>
                 </div>
 
                 ${esCompartida ? `
-                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border);">
+                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); white-space: nowrap; flex-shrink: 0;">
                     Compartida
                   </span>
                 ` : ''}
@@ -398,7 +400,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               ${esCompartida ? `
                 <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
                   <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
-                  <span style="font-size: 11px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
+                  <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
                 </div>
               ` : ''}
 
