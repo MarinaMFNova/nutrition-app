@@ -25,7 +25,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         </p>
       </div>
 
-      <!-- BOTÓN VOLVER GENÉRICO (SÓLO SI NO ES TU PROPIO PERFIL) -->
+      <!-- BOTÓN VOLVER GENÉRICO -->
       ${!esMiPerfil ? `
         <button id="btnVolverAtras" class="btn-outline" style="width: auto; margin: 0; padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
           ◀ Volver
@@ -33,47 +33,55 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       ` : ''}
     </div>
 
-    <!-- HEADER PERFIL SOCIAL RESPONSIVO -->
-    <div class="card" style="padding: 24px; border-radius: 20px; margin-bottom: 24px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+    <!-- HEADER PERFIL SOCIAL ADAPTADO A MÓVIL Y PC -->
+    <div class="card" style="padding: 20px; border-radius: 20px; margin-bottom: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 20px;">
         
-        <div style="display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1;">
-          <div id="avatarContainer" style="width: 76px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
-            ${icons.user}
-          </div>
-          <div style="min-width: 0; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-              <!-- SE HA QUITADO EL MAX-WIDTH RIGIDO DE 220PX -->
-              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">Cargando...</h2>
-              
-              ${esMiPerfil ? `
-                <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
-                  ${icons.settings} Editar Perfil
-                </button>
-              ` : `
-                <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 16px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; white-space: nowrap; flex-shrink: 0;">
-                  Seguir
-                </button>
-              `}
+        <!-- BLOQUE SUPERIOR: AVATAR + NOMBRE + BOTÓN -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; width: 100%;">
+          
+          <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
+            <div id="avatarContainer" style="width: 68px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
+              ${icons.user}
             </div>
-            <div id="lblUsername" style="font-size: 14px; font-weight: 700; color: var(--primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@...</div>
-            <div id="lblEmail" style="font-size: 12px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            
+            <div style="min-width: 0; flex: 1;">
+              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main); line-height: 1.2; word-break: break-word;">Cargando...</h2>
+              <div id="lblUsername" style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@...</div>
+              <div id="lblEmail" style="font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            </div>
           </div>
+
+          <!-- BOTÓN EDICIÓN / SEGUIMIENTO EN LÍNEA/COLUMNA CÓMODA -->
+          <div style="flex-shrink: 0;">
+            ${esMiPerfil ? `
+              <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                ${icons.settings} Editar Perfil
+              </button>
+            ` : `
+              <button id="btnSeguirUsuario" class="btn-primary" style="width: auto; padding: 6px 18px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; white-space: nowrap;">
+                Seguir
+              </button>
+            `}
+          </div>
+
         </div>
 
-        <!-- CONTADORES SOCIALES -->
-        <div style="display: flex; gap: 20px; text-align: center; flex-wrap: wrap; justify-content: flex-start;">
-          <div style="cursor: pointer;" id="btnVerSeguidores">
+        <!-- BLOQUE INFERIOR: CONTADORES SOCIALES (SEPARADOS Y CENTRADOS EN MÓVIL) -->
+        <div style="display: flex; justify-content: space-around; align-items: center; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; width: 100%;">
+          <div style="cursor: pointer; flex: 1;" id="btnVerSeguidores">
             <div id="cntSeguidores" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Seguidores</div>
           </div>
-          <div style="cursor: pointer;" id="btnVerSiguiendo">
+          <div style="width: 1px; height: 24px; background: var(--border);"></div>
+          <div style="cursor: pointer; flex: 1;" id="btnVerSiguiendo">
             <div id="cntSiguiendo" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Siguiendo</div>
           </div>
-          <div>
+          <div style="width: 1px; height: 24px; background: var(--border);"></div>
+          <div style="flex: 1;">
             <div id="cntRecetasPublicas" style="font-size: 18px; font-weight: 800; color: var(--primary);">0</div>
-            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Recetas Públicas</div>
+            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Públicas</div>
           </div>
         </div>
 
