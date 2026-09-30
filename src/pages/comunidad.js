@@ -110,7 +110,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
-  // NAVEGAR AL PERFIL DEL USUARIO
+  // NAVEGAR AL PERFIL
   function irAlPerfilCocinero(userId) {
     const appContent = document.querySelector('.main-content');
     if (appContent && userId) {
@@ -207,22 +207,187 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     modalDetalle.classList.add('visible');
   }
 
+  function renderizarListaFeed(recetasFiltradas, mapaPerfiles) {
+    const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+
+    gridFeed.innerHTML = recetasFiltradas.map(r => {
+      const autorPublicador = mapaPerfiles[r.user_id] || {};
+      const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
+      const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+
+      const listaIngredientes = r.ingredientes 
+        ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
+        : 'Sin ingredientes especificados';
+
+      return `
+        <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
+          <div>
+            ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;" class="click-autor-header" data-autorid="${autorPublicador.id}">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
+                  ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
+                </div>
+                <span style="font-size: 11px; font-weight: 700; color: #2ba8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  @${autorPublicador.username || 'usuario'}
+                </span>
+              </div>
+            </div>
+
+            ${esCompartida ? `
+              <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 5px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
+                <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
+                <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
+                <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
+              </div>
+            ` : ''}
+
+            <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
+            <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${r.tiempo_preparacion || 15} min</span>
+            </p>
+
+            <div style="margin-bottom: 10px; padding: 6px 8px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);">
+              <span style="font-size: 10px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+                ${icons.cart || '🛒'} Ingredientes:
+              </span>
+              <p style="margin: 2px 0 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                ${listaIngredientes}
+              </p>
+            </div>
+          </div>
+
+          <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span>Guardar en Mis Recetas</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    gridFeed.querySelectorAll('.card-receta-feed').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-importar-receta')) return;
+        
+        const headerAutor = e.target.closest('.click-autor-header');
+        if (headerAutor) {
+          e.stopPropagation();
+          const aId = headerAutor.getAttribute('data-autorid');
+          if (aId) irAlPerfilCocinero(aId);
+          return;
+        }
+
+        const btnOriginal = e.target.closest('.click-autor-original');
+        if (btnOriginal) {
+          e.stopPropagation();
+          const aId = btnOriginal.getAttribute('data-autorid');
+          if (aId) irAlPerfilCocinero(aId);
+          return;
+        }
+
+        const id = card.getAttribute('data-id');
+        const recetaSel = recetasFiltradas.find(item => item.id === id);
+        if (recetaSel) {
+          abrirDetalleFeed(recetaSel, mapaPerfiles[recetaSel.user_id] || {}, recetaSel.autor_original_id ? mapaPerfiles[recetaSel.autor_original_id] : null);
+        }
+      });
+    });
+
+    gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const recetaId = btn.getAttribute('data-id');
+        btn.disabled = true;
+        btn.innerText = 'Guardando...';
+
+        try {
+          const { data: recetaOriginal, error: getErr } = await supabase
+            .from('recetas')
+            .select('*')
+            .eq('id', recetaId)
+            .single();
+
+          if (getErr || !recetaOriginal) {
+            mostrarAvisoModal('Error', 'No se pudo leer la información de la receta.', true);
+            btn.disabled = false;
+            btn.innerText = 'Guardar en Mis Recetas';
+            return;
+          }
+
+          const idCreadorOriginal = recetaOriginal.autor_original_id || recetaOriginal.user_id;
+          const idRecetaPadre = recetaOriginal.receta_original_id || recetaOriginal.id;
+          const autorCreador = mapaPerfiles[idCreadorOriginal] || {};
+          const tagCreador = autorCreador.username ? `@${autorCreador.username}` : 'autor original';
+          const nombreLimpio = recetaOriginal.nombre.replace(/\s*\(de @[^)]+\)/gi, '');
+
+          const nuevaRecetaPayload = {
+            user_id: usuarioActual.id,
+            nombre: nombreLimpio,
+            ingredientes: recetaOriginal.ingredientes || '',
+            pasos: recetaOriginal.pasos || '',
+            tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
+            imagen_url: recetaOriginal.imagen_url || null,
+            categorias: recetaOriginal.categorias || 'Comida',
+            es_publica: false,
+            receta_original_id: idRecetaPadre,
+            autor_original_id: idCreadorOriginal
+          };
+
+          const { error: insertErr } = await supabase
+            .from('recetas')
+            .insert([nuevaRecetaPayload]);
+
+          if (insertErr) {
+            mostrarAvisoModal('Error al importar', insertErr.message || 'Error al guardar la receta.', true);
+            btn.disabled = false;
+            btn.innerText = 'Guardar en Mis Recetas';
+            return;
+          }
+
+          if (idCreadorOriginal && idCreadorOriginal !== usuarioActual.id) {
+            await supabase.from('notificaciones').insert([{
+              user_id: idCreadorOriginal,
+              emisor_id: usuarioActual.id,
+              tipo: 'receta_guardada',
+              referencia: nombreLimpio,
+              leida: false
+            }]);
+          }
+
+          mostrarAvisoModal('¡Receta Guardada!', `"${nombreLimpio}" de ${tagCreador} se ha añadido a tus recetas.`);
+          btn.innerText = '¡Guardada!';
+
+          if (onRecetaImportada) onRecetaImportada();
+
+        } catch (err) {
+          console.error('Error en proceso de importación:', err);
+          mostrarAvisoModal('Error inesperado', err.message || 'Error al procesar la importación.', true);
+          btn.disabled = false;
+          btn.innerText = 'Guardar en Mis Recetas';
+        }
+      });
+    });
+  }
+
   async function cargarComunidad(busqueda = '') {
     const termino = busqueda.toLowerCase().trim().replace('@', '');
     const hayBusqueda = termino.length > 0;
 
-    gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
-
     try {
-      // 1. OBTENER SEGUIDOS Y RECETAS PÚBLICAS SIMULTÁNEAMENTE (PETICIÓN LIGERA DE 15 RECETAS)
+      // 1. PETICIÓN LIGERA
       const [resRelaciones, resRecetas] = await Promise.all([
         supabase.from('seguidores').select('seguido_id, estado').eq('seguidor_id', usuarioActual.id),
         supabase.from('recetas')
           .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url')
           .eq('es_publica', true)
           .order('created_at', { ascending: false })
-          .limit(15)
+          .limit(20)
       ]);
+
+      if (resRecetas.error) throw resRecetas.error;
+      if (resRelaciones.error) throw resRelaciones.error;
 
       const mapaRelaciones = {};
       (resRelaciones.data || []).forEach(rel => {
@@ -231,7 +396,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
 
-      // 2. MOSTRAR RESULTADOS DE BÚSQUEDA
+      // BUSCADOR
       if (hayBusqueda) {
         const { data: perfilesEncontrados } = await supabase
           .from('perfiles')
@@ -268,37 +433,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           gridUsuarios.querySelectorAll('.area-click-perfil').forEach(area => {
             area.addEventListener('click', () => irAlPerfilCocinero(area.getAttribute('data-id')));
           });
-
-          gridUsuarios.querySelectorAll('.btn-enviar-solicitud').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const idDestino = btn.getAttribute('data-id');
-              btn.disabled = true;
-              btn.innerText = 'Enviando...';
-
-              try {
-                await supabase.from('seguidores').insert([{
-                  seguidor_id: usuarioActual.id,
-                  seguido_id: idDestino,
-                  estado: 'pendiente'
-                }]);
-
-                await supabase.from('notificaciones').insert([{
-                  user_id: idDestino,
-                  emisor_id: usuarioActual.id,
-                  tipo: 'solicitud_seguimiento',
-                  leida: false
-                }]);
-
-                mostrarAvisoModal('Solicitud enviada', 'Se ha enviado la solicitud de seguimiento correctamente.');
-                cargarComunidad(inputBuscar.value);
-              } catch (e) {
-                console.error('Error enviando solicitud:', e);
-                btn.disabled = false;
-                btn.innerText = 'Seguir';
-              }
-            });
-          });
         } else {
           secUsuarios.classList.add('hidden');
         }
@@ -306,20 +440,20 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
-      // 3. FILTRAR EN MEMORIA LOCAL SÓLO LAS RECETAS DE AMIGOS ACEPTADOS
+      // FILTRAR RECETAS DE SEGUIDOS
       const recetasComunidad = (resRecetas.data || []).filter(r => idsAceptados.includes(r.user_id));
 
       if (recetasComunidad.length === 0) {
         gridFeed.innerHTML = `
           <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
-            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Sin publicaciones recientes</p>
-            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Tus cocineros seguidos aún no han compartido recetas públicas.</p>
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no tienes publicaciones</p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
           </div>
         `;
         return;
       }
 
-      // 4. DESCARGAR PERFILES DE LOS AUTORES (EN UNA SOLA CONSULTA RÁPIDA)
+      // PERFILES
       const idsPerfiles = [...new Set(recetasComunidad.flatMap(r => [r.user_id, r.autor_original_id].filter(Boolean)))];
       const { data: perfiles } = await supabase
         .from('perfiles')
@@ -336,178 +470,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       });
 
       if (recetasFiltradas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas en esta categoría.</p>';
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas coincidentes en esta categoría.</p>';
         return;
       }
 
-      const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
-
-      gridFeed.innerHTML = recetasFiltradas.map(r => {
-        const autorPublicador = mapaPerfiles[r.user_id] || {};
-        const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
-        const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
-
-        const listaIngredientes = r.ingredientes 
-          ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
-          : 'Sin ingredientes especificados';
-
-        return `
-          <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
-            <div>
-              ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
-              
-              <!-- AUTOR PUBLICADOR -->
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px;">
-                <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;" class="click-autor-header" data-autorid="${autorPublicador.id}">
-                  <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
-                    ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <span style="font-size: 11px; font-weight: 700; color: #2ba8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    @${autorPublicador.username || 'usuario'}
-                  </span>
-                </div>
-              </div>
-
-              <!-- CREADOR ORIGINAL CON ICONO VECTORIAL SVG -->
-              ${esCompartida ? `
-                <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 5px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
-                  <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
-                  <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
-                  <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
-                </div>
-              ` : ''}
-
-              <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
-              <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <span>${r.tiempo_preparacion || 15} min</span>
-              </p>
-
-              <div style="margin-bottom: 10px; padding: 6px 8px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);">
-                <span style="font-size: 10px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 4px;">
-                  ${icons.cart || '🛒'} Ingredientes:
-                </span>
-                <p style="margin: 2px 0 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                  ${listaIngredientes}
-                </p>
-              </div>
-            </div>
-
-            <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              <span>Guardar en Mis Recetas</span>
-            </button>
-          </div>
-        `;
-      }).join('');
-
-      gridFeed.querySelectorAll('.card-receta-feed').forEach(card => {
-        card.addEventListener('click', (e) => {
-          if (e.target.closest('.btn-importar-receta')) return;
-          
-          const headerAutor = e.target.closest('.click-autor-header');
-          if (headerAutor) {
-            e.stopPropagation();
-            const autorId = headerAutor.getAttribute('data-autorid');
-            if (autorId) irAlPerfilCocinero(autorId);
-            return;
-          }
-
-          const btnOriginal = e.target.closest('.click-autor-original');
-          if (btnOriginal) {
-            e.stopPropagation();
-            const autorId = btnOriginal.getAttribute('data-autorid');
-            if (autorId) irAlPerfilCocinero(autorId);
-            return;
-          }
-
-          const id = card.getAttribute('data-id');
-          const recetaSel = recetasComunidad.find(item => item.id === id);
-          if (recetaSel) {
-            abrirDetalleFeed(recetaSel, mapaPerfiles[recetaSel.user_id] || {}, recetaSel.autor_original_id ? mapaPerfiles[recetaSel.autor_original_id] : null);
-          }
-        });
-      });
-
-      // LÓGICA DE IMPORTACIÓN CON ATRIBUCIÓN
-      gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const recetaId = btn.getAttribute('data-id');
-          btn.disabled = true;
-          btn.innerText = 'Guardando...';
-
-          try {
-            const { data: recetaOriginal, error: getErr } = await supabase
-              .from('recetas')
-              .select('*')
-              .eq('id', recetaId)
-              .single();
-
-            if (getErr || !recetaOriginal) {
-              mostrarAvisoModal('Error', 'No se pudo leer la información de la receta.', true);
-              btn.disabled = false;
-              btn.innerText = 'Guardar en Mis Recetas';
-              return;
-            }
-
-            const idCreadorOriginal = recetaOriginal.autor_original_id || recetaOriginal.user_id;
-            const idRecetaPadre = recetaOriginal.receta_original_id || recetaOriginal.id;
-            const autorCreador = mapaPerfiles[idCreadorOriginal] || {};
-            const tagCreador = autorCreador.username ? `@${autorCreador.username}` : 'autor original';
-            const nombreLimpio = recetaOriginal.nombre.replace(/\s*\(de @[^)]+\)/gi, '');
-
-            const nuevaRecetaPayload = {
-              user_id: usuarioActual.id,
-              nombre: nombreLimpio,
-              ingredientes: recetaOriginal.ingredientes || '',
-              pasos: recetaOriginal.pasos || '',
-              tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
-              imagen_url: recetaOriginal.imagen_url || null,
-              categorias: recetaOriginal.categorias || 'Comida',
-              es_publica: false,
-              receta_original_id: idRecetaPadre,
-              autor_original_id: idCreadorOriginal
-            };
-
-            const { error: insertErr } = await supabase
-              .from('recetas')
-              .insert([nuevaRecetaPayload]);
-
-            if (insertErr) {
-              mostrarAvisoModal('Error al importar', insertErr.message || 'Error al guardar la receta.', true);
-              btn.disabled = false;
-              btn.innerText = 'Guardar en Mis Recetas';
-              return;
-            }
-
-            if (idCreadorOriginal && idCreadorOriginal !== usuarioActual.id) {
-              await supabase.from('notificaciones').insert([{
-                user_id: idCreadorOriginal,
-                emisor_id: usuarioActual.id,
-                tipo: 'receta_guardada',
-                referencia: nombreLimpio,
-                leida: false
-              }]);
-            }
-
-            mostrarAvisoModal('¡Receta Guardada!', `"${nombreLimpio}" de ${tagCreador} se ha añadido a tus recetas.`);
-            btn.innerText = '¡Guardada!';
-
-            if (onRecetaImportada) onRecetaImportada();
-
-          } catch (err) {
-            console.error('Error en proceso de importación:', err);
-            mostrarAvisoModal('Error inesperado', err.message || 'Error al procesar la importación.', true);
-            btn.disabled = false;
-            btn.innerText = 'Guardar en Mis Recetas';
-          }
-        });
-      });
+      renderizarListaFeed(recetasFiltradas, mapaPerfiles);
 
     } catch (err) {
       console.error("Error al cargar la comunidad:", err);
-      gridFeed.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Error al cargar las publicaciones.</p>';
+      gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las publicaciones: ${err.message || 'Comprueba tu conexión'}</p>`;
     }
   }
 
