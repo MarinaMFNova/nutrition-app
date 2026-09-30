@@ -567,20 +567,74 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       const grid = container.querySelector('#gridMisPublicas');
       grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando...</p>';
 
-      const { data: publicas } = await supabase.from('recetas').select('*').eq('user_id', perfilId).eq('es_publica', true).order('created_at', { ascending: false });
+      const { data: publicas } = await supabase
+        .from('recetas')
+        .select('*')
+        .eq('user_id', perfilId)
+        .eq('es_publica', true)
+        .order('created_at', { ascending: false });
 
       if (!publicas || publicas.length === 0) {
         grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
         return;
       }
 
-      grid.innerHTML = publicas.map(r => `
-        <div class="card" style="padding: 12px; border: 1px solid var(--border);">
-          ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
-          <h4 style="margin: 0 0 4px 0; font-size: 14px;">${r.nombre}</h4>
-          <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
-        </div>
-      `).join('');
+      // RECOPILAR IDS DE AUTORES ORIGINARIOS (SI EXISTEN RECETAS COMPARTIDAS)
+      const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
+      const mapaAutoresOriginales = {};
+
+      if (idsAutoresOriginales.length > 0) {
+        const { data: perfilesOriginales } = await supabase
+          .from('perfiles')
+          .select('*')
+          .in('id', idsAutoresOriginales);
+
+        (perfilesOriginales || []).forEach(p => {
+          mapaPerfilesOriginales[p.id] = p;
+        });
+      }
+
+      grid.innerHTML = publicas.map(r => {
+        const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
+        const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+
+        return `
+          <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
+              
+              ${esCompartida ? `
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border);">
+                    Compartida
+                  </span>
+                </div>
+                <div class="btn-ver-perfil-creador-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
+                  <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
+                  <span style="font-size: 11px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
+                </div>
+              ` : ''}
+
+              <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
+              <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const autorId = btn.getAttribute('data-autorid');
+          if (autorId) {
+            const appContent = document.querySelector('.main-content');
+            if (appContent) {
+              appContent.innerHTML = '';
+              appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+            }
+          }
+        });
+      });
     }
 
     async function cargarListasSociales() {

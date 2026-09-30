@@ -11,6 +11,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let imagenBase64 = null;
   let recetaEditandoId = null;
   let recetaABorrarId = null;
+  
+  // VARIABLES PARA CONSERVAR LA AUTORÍA ORIGINAL AL EDITAR
+  let autorOriginalId = null;
+  let recetaOriginalId = null;
 
   const listaCategorias = [
     'Todos', 
@@ -225,6 +229,8 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   function resetFormulario() {
     formReceta.reset();
     recetaEditandoId = null;
+    autorOriginalId = null;
+    recetaOriginalId = null;
     imagenBase64 = null;
     chkEsPublica.checked = false;
     formTitle.innerText = "Crear Nueva Receta";
@@ -412,10 +418,18 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   function abrirEdicionReceta(r) {
     resetFormulario();
     recetaEditandoId = r.id;
+    
+    // RETENER INFORMACIÓN DE AUTORÍA ORIGINAL AL ABRIR LA EDICIÓN
+    autorOriginalId = r.autor_original_id || null;
+    recetaOriginalId = r.receta_original_id || null;
+
     formTitle.innerText = "Editar Receta";
     btnSubmit.innerText = "Actualizar Receta";
 
-    container.querySelector('#recetaNombre').value = r.nombre || '';
+    // Limpia cualquier marca anterior tipo (de @usuario) en el campo del nombre
+    const nombreLimpio = (r.nombre || '').replace(/\s*\(de @[^)]+\)/gi, '');
+    container.querySelector('#recetaNombre').value = nombreLimpio;
+    
     container.querySelector('#recetaTiempo').value = r.tiempo_preparacion || 15;
     container.querySelector('#recetaIngredientes').value = r.ingredientes || '';
     container.querySelector('#recetaPasos').value = r.pasos || '';
@@ -509,7 +523,11 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         ingredientes,
         pasos,
         categorias: categoriasStr,
-        es_publica
+        es_publica,
+        
+        // ⚠️ INCLUIR SIEMPRE LOS CAMPOS DE AUTORÍA ORIGINAL
+        autor_original_id: autorOriginalId,
+        receta_original_id: recetaOriginalId
       };
 
       if (recetaEditandoId) {

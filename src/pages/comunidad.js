@@ -147,17 +147,33 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       modalNotif.classList.add('visible');
     }
 
-    function abrirDetalleFeed(r, autor) {
+    function abrirDetalleFeed(r, autorPublicador, autorOriginal) {
       const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+      const esCompartida = autorOriginal && autorOriginal.id !== r.user_id;
 
       contenidoDetalle.innerHTML = `
         ${imgHtml}
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;" id="btnAbrirPerfilDesdeModal">
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
-            ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" id="btnAbrirPerfilPublicadorModal">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+              ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autorPublicador.username || 'usuario'}</span>
           </div>
-          <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autor.username || 'usuario'}</span>
+
+          ${esCompartida ? `
+            <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);">
+              Compartida
+            </span>
+          ` : ''}
         </div>
+
+        ${esCompartida ? `
+          <div id="btnAbrirPerfilOriginalModal" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 14px; cursor: pointer;">
+            <span style="font-size: 11px; color: var(--text-muted);">Receta creada por:</span>
+            <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username}</span>
+          </div>
+        ` : ''}
 
         <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
         <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
@@ -179,10 +195,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         </div>
       `;
 
-      contenidoDetalle.querySelector('#btnAbrirPerfilDesdeModal').addEventListener('click', () => {
+      contenidoDetalle.querySelector('#btnAbrirPerfilPublicadorModal').addEventListener('click', () => {
         modalDetalle.classList.remove('visible');
-        irAlPerfilCocinero(autor.id);
+        irAlPerfilCocinero(autorPublicador.id);
       });
+
+      const btnOriginal = contenidoDetalle.querySelector('#btnAbrirPerfilOriginalModal');
+      if (btnOriginal) {
+        btnOriginal.addEventListener('click', () => {
+          modalDetalle.classList.remove('visible');
+          irAlPerfilCocinero(autorOriginal.id);
+        });
+      }
 
       modalDetalle.classList.add('visible');
     }
@@ -310,10 +334,20 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         return;
       }
 
-      const idsAutores = [...new Set(recetas.map(r => r.user_id))];
-      const { data: perfilesAutores } = await supabase.from('perfiles').select('*').in('id', idsAutores);
-      const mapaAutores = {};
-      (perfilesAutores || []).forEach(p => { mapaAutores[p.id] = p; });
+      // CONSULTAR PERFILES DE AUTORES PUBLICADORES Y AUTORES ORIGINARIOS
+      const idsPerfilesRequeridos = new Set();
+      recetas.forEach(r => {
+        if (r.user_id) idsPerfilesRequeridos.add(r.user_id);
+        if (r.autor_original_id) idsPerfilesRequeridos.add(r.autor_original_id);
+      });
+
+      const { data: perfilesObtenidos } = await supabase
+        .from('perfiles')
+        .select('*')
+        .in('id', Array.from(idsPerfilesRequeridos));
+
+      const mapaPerfiles = {};
+      (perfilesObtenidos || []).forEach(p => { mapaPerfiles[p.id] = p; });
 
       let recetasFiltradas = recetas.filter(r => {
         const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(termino) : false;
@@ -331,7 +365,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       }
 
       gridFeed.innerHTML = recetasFiltradas.map(r => {
-        const autor = mapaAutores[r.user_id] || {};
+        const autorPublicador = mapaPerfiles[r.user_id] || {};
+        const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
+        const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+
         const listaIngredientes = r.ingredientes 
           ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
           : 'Sin ingredientes especificados';
@@ -341,12 +378,29 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; width: fit-content;" class="click-autor-header" data-autorid="${autor.id}">
-                <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
-                  ${autor.avatar_url ? `<img src="${autor.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autor.username || 'U').charAt(0).toUpperCase()}
+              <!-- AUTOR PUBLICADOR -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px; width: fit-content;" class="click-autor-header" data-autorid="${autorPublicador.id}">
+                  <div style="width: 22px; height: 22px; border-radius: 50%; background: #e6f4f4; color: #2ba8a8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; overflow: hidden; flex-shrink: 0;">
+                    ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span style="font-size: 11px; font-weight: 700; color: #2ba8a8;">@${autorPublicador.username || 'usuario'}</span>
                 </div>
-                <span style="font-size: 11px; font-weight: 700; color: #2ba8a8;">@${autor.username || 'usuario'}</span>
+
+                ${esCompartida ? `
+                  <span style="font-size: 10px; font-weight: 700; color: var(--accent-blue); background: var(--input-bg); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border);">
+                    Compartida
+                  </span>
+                ` : ''}
               </div>
+
+              <!-- CREADOR ORIGINAL -->
+              ${esCompartida ? `
+                <div class="click-autor-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
+                  <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
+                  <span style="font-size: 11px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
+                </div>
+              ` : ''}
 
               <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
               <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
@@ -384,15 +438,25 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             return;
           }
 
+          const btnOriginal = e.target.closest('.click-autor-original');
+          if (btnOriginal) {
+            e.stopPropagation();
+            const autorId = btnOriginal.getAttribute('data-autorid');
+            if (autorId) irAlPerfilCocinero(autorId);
+            return;
+          }
+
           const id = card.getAttribute('data-id');
           const recetaSel = recetas.find(item => item.id === id);
           if (recetaSel) {
-            const autor = mapaAutores[recetaSel.user_id] || {};
-            abrirDetalleFeed(recetaSel, autor);
+            const autorPublicador = mapaPerfiles[recetaSel.user_id] || {};
+            const autorOriginal = recetaSel.autor_original_id ? mapaPerfiles[recetaSel.autor_original_id] : null;
+            abrirDetalleFeed(recetaSel, autorPublicador, autorOriginal);
           }
         });
       });
 
+      // LÓGICA DE IMPORTACIÓN CON ATRIBUCIÓN
       gridFeed.querySelectorAll('.btn-importar-receta').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -414,19 +478,26 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            const autorOriginalId = recetaOriginal.user_id;
-            const autor = mapaAutores[autorOriginalId] || {};
-            const usuarioAutor = autor.username ? `@${autor.username}` : 'Comunidad';
+            // Mantiene el creador inicial si ya era una receta compartida
+            const idCreadorOriginal = recetaOriginal.autor_original_id || recetaOriginal.user_id;
+            const idRecetaPadre = recetaOriginal.receta_original_id || recetaOriginal.id;
+            const autorCreador = mapaPerfiles[idCreadorOriginal] || {};
+            const tagCreador = autorCreador.username ? `@${autorCreador.username}` : 'autor original';
+
+            // Nombre sin añadidos de texto
+            const nombreLimpio = recetaOriginal.nombre.replace(/\s*\(de @[^)]+\)/gi, '');
 
             const nuevaRecetaPayload = {
               user_id: usuarioActual.id,
-              nombre: `${recetaOriginal.nombre} (de ${usuarioAutor})`,
+              nombre: nombreLimpio,
               ingredientes: recetaOriginal.ingredientes || '',
               pasos: recetaOriginal.pasos || '',
               tiempo_preparacion: recetaOriginal.tiempo_preparacion || 15,
               imagen_url: recetaOriginal.imagen_url || null,
               categorias: recetaOriginal.categorias || 'Comida',
-              es_publica: false
+              es_publica: false,
+              receta_original_id: idRecetaPadre,
+              autor_original_id: idCreadorOriginal
             };
 
             const { error: insertErr } = await supabase
@@ -440,21 +511,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            if (autorOriginalId && autorOriginalId !== usuarioActual.id) {
-              const { error: notifErr } = await supabase.from('notificaciones').insert([{
-                user_id: autorOriginalId,
+            // Notificar al autor original de que su receta fue guardada
+            if (idCreadorOriginal && idCreadorOriginal !== usuarioActual.id) {
+              await supabase.from('notificaciones').insert([{
+                user_id: idCreadorOriginal,
                 emisor_id: usuarioActual.id,
                 tipo: 'receta_guardada',
-                referencia: recetaOriginal.nombre,
+                referencia: nombreLimpio,
                 leida: false
               }]);
-
-              if (notifErr) {
-                console.error('Error enviando notificación:', notifErr.message);
-              }
             }
 
-            mostrarAvisoModal('¡Receta Guardada!', `"${recetaOriginal.nombre}" de ${usuarioAutor} se ha añadido a tus recetas.`);
+            mostrarAvisoModal('¡Receta Guardada!', `"${nombreLimpio}" de ${tagCreador} se ha añadido a tus recetas.`);
             btn.innerText = '¡Guardada!';
 
             if (onRecetaImportada) onRecetaImportada();
