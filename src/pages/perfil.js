@@ -42,8 +42,9 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
             ${icons.user}
           </div>
           <div style="min-width: 0; flex: 1;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">Cargando...</h2>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <!-- SE HA QUITADO EL MAX-WIDTH RIGIDO DE 220PX -->
+              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">Cargando...</h2>
               
               ${esMiPerfil ? `
                 <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
@@ -580,7 +581,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
           return;
         }
 
-        // RECOPILAR IDS DE AUTORES ORIGINARIOS (SI EXISTEN RECETAS COMPARTIDAS)
         const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
         const mapaAutoresOriginales = {};
 
@@ -591,7 +591,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
             .in('id', idsAutoresOriginales);
 
           (perfilesOriginales || []).forEach(p => {
-            mapaAutoresOriginales[p.id] = p; // CORREGIDO: mapaAutoresOriginales
+            mapaAutoresOriginales[p.id] = p;
           });
         }
 
@@ -654,7 +654,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         .select('seguido_id')
         .eq('seguidor_id', perfilId);
 
-      // PERSONAS QUE SIGUEN A ESTE USUARIO
       if (relacionesSeguidores && relacionesSeguidores.length > 0) {
         const idsSeguidores = relacionesSeguidores.map(s => s.seguidor_id);
         const { data: perfilesSeguidores } = await supabase.from('perfiles').select('*').in('id', idsSeguidores);
@@ -687,7 +686,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Nadie le sigue aún.</p>';
       }
 
-      // PERSONAS A LAS QUE SIGUE ESTE USUARIO
       if (relacionesSiguiendo && relacionesSiguiendo.length > 0) {
         const idsSiguiendo = relacionesSiguiendo.map(s => s.seguido_id);
         const { data: perfilesSiguiendo } = await supabase.from('perfiles').select('*').in('id', idsSiguiendo);
