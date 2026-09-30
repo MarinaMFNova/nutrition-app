@@ -16,6 +16,9 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let autorOriginalId = null;
   let recetaOriginalId = null;
 
+  // MAPA DE PERFILES DE AUTORES ORIGINALES
+  let mapaAutoresOriginales = {};
+
   const listaCategorias = [
     'Todos', 
     'Desayuno', 
@@ -356,8 +359,32 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   });
 
   async function cargarRecetas() {
-    const { data, error } = await supabase.from('recetas').select('*').eq('user_id', usuarioActual.id).order('created_at', { ascending: false });
-    if (!error && data) { recetas = data; renderGrid(); }
+    const { data, error } = await supabase
+      .from('recetas')
+      .select('*')
+      .eq('user_id', usuarioActual.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) { 
+      recetas = data;
+
+      // OBTENER INFORMACIÓN DE PERFILES DE AUTORES ORIGINALES
+      const idsAutoresOriginales = [...new Set(recetas.map(r => r.autor_original_id).filter(Boolean))];
+      
+      mapaAutoresOriginales = {};
+      if (idsAutoresOriginales.length > 0) {
+        const { data: perfilesOriginales } = await supabase
+          .from('perfiles')
+          .select('*')
+          .in('id', idsAutoresOriginales);
+
+        (perfilesOriginales || []).forEach(p => {
+          mapaAutoresOriginales[p.id] = p;
+        });
+      }
+
+      renderGrid(); 
+    }
   }
 
   function renderGrid() {
@@ -379,18 +406,32 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       card.className = 'card';
       card.style.cssText = 'padding: 12px; border-radius: 14px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s;';
 
+      const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
+      const esCompartida = !!autorOriginal && autorOriginal.id !== usuarioActual.id;
+
       const imgHtml = r.imagen_url 
         ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` 
         : `<div style="width: 100%; height: 80px; background: var(--primary-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 8px;">${icons.recetas}</div>`;
 
       const badgeVisibilidad = r.es_publica 
-        ? `<span style="font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; margin-bottom: 4px;">${icons.globe} Pública</span>`
-        : `<span style="font-size: 10px; font-weight: 800; color: var(--text-muted); background: var(--input-bg); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; margin-bottom: 4px;">${icons.lock} Privada</span>`;
+        ? `<span style="font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">${icons.globe} Pública</span>`
+        : `<span style="font-size: 10px; font-weight: 800; color: var(--text-muted); background: var(--input-bg); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">${icons.lock} Privada</span>`;
+
+      // ETIQUETA DE CREADOR ORIGINAL
+      const etiquetaAutorOriginal = esCompartida ? `
+        <div style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-top: 6px; margin-bottom: 6px; width: fit-content;">
+          <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
+          <span style="font-size: 11px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
+        </div>
+      ` : '';
 
       card.innerHTML = `
         <div class="card-click-area">
           ${imgHtml}
-          ${badgeVisibilidad}
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px;">
+            ${badgeVisibilidad}
+          </div>
+          ${etiquetaAutorOriginal}
           <h3 style="margin: 2px 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.2;">${r.nombre}</h3>
           <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;">
             ${icons.time} ${r.tiempo_preparacion || 15} min • ${r.categorias || 'Comida'}
@@ -402,7 +443,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         </div>
       `;
 
-      card.querySelector('.card-click-area').addEventListener('click', () => abrirDetalleReceta(r));
+      card.querySelector('.card-click-area').addEventListener('click', () => abrirDetalleReceta(r, autorOriginal));
       card.querySelector('.btn-edit-receta').addEventListener('click', (e) => { e.stopPropagation(); abrirEdicionReceta(r); });
       card.querySelector('.btn-delete-receta').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -451,10 +492,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     modalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function abrirDetalleReceta(r) {
+  function abrirDetalleReceta(r, autorOriginal = null) {
     const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
 
     const estadoTexto = r.es_publica ? `${icons.globe} Receta pública (visible para la comunidad)` : `${icons.lock} Receta privada`;
+    
+    const esCompartida = !!autorOriginal && autorOriginal.id !== usuarioActual.id;
 
     contenidoDetalle.innerHTML = `
       ${imgHtml}
@@ -467,6 +510,14 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
           <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${icons.edit} Editar</button>
         </div>
       </div>
+
+      ${esCompartida ? `
+        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 10px; width: fit-content;">
+          <span style="font-size: 11px; color: var(--text-muted);">Creada por:</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
+        </div>
+      ` : ''}
+
       <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">${icons.time} ${r.tiempo_preparacion || 15} min • Apto para: ${r.categorias || 'Comida'}</div>
       <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">${estadoTexto}</div>
 
@@ -525,7 +576,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         categorias: categoriasStr,
         es_publica,
         
-        // ⚠️ INCLUIR SIEMPRE LOS CAMPOS DE AUTORÍA ORIGINAL
+        // INCLUIR SIEMPRE LOS CAMPOS DE AUTORÍA ORIGINAL
         autor_original_id: autorOriginalId,
         receta_original_id: recetaOriginalId
       };
