@@ -90,146 +90,152 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     </div>
   `;
 
-  setTimeout(() => {
-    const gridFeed = container.querySelector('#gridFeed');
-    const inputBuscar = container.querySelector('#inputBuscarFeed');
-    const secUsuarios = container.querySelector('#secUsuariosEncontrados');
-    const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
+  // ELEMENTOS DEL DOM
+  const gridFeed = container.querySelector('#gridFeed');
+  const inputBuscar = container.querySelector('#inputBuscarFeed');
+  const secUsuarios = container.querySelector('#secUsuariosEncontrados');
+  const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
 
-    const modalDetalle = container.querySelector('#modalDetalleFeed');
-    const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
-    const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
-    
-    const modalNotif = container.querySelector('#modalNotificacionFeed');
-    const modalIcon = container.querySelector('#feedModalIcon');
-    const modalTitle = container.querySelector('#feedModalTitle');
-    const modalMsg = container.querySelector('#feedModalMsg');
-    const btnCerrarModal = container.querySelector('#btnCerrarModalFeed');
+  const modalDetalle = container.querySelector('#modalDetalleFeed');
+  const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
+  const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
+  
+  const modalNotif = container.querySelector('#modalNotificacionFeed');
+  const modalIcon = container.querySelector('#feedModalIcon');
+  const modalTitle = container.querySelector('#feedModalTitle');
+  const modalMsg = container.querySelector('#feedModalMsg');
+  const btnCerrarModal = container.querySelector('#btnCerrarModalFeed');
 
-    btnCerrarModal.addEventListener('click', () => modalNotif.classList.remove('visible'));
-    btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
-    modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
+  btnCerrarModal.addEventListener('click', () => modalNotif.classList.remove('visible'));
+  btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
+  modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
 
-    // FUNCIÓN PARA NAVEGAR AL PERFIL DEL USUARIO
-    function irAlPerfilCocinero(userId) {
-      const appContent = document.querySelector('.main-content');
-      if (appContent && userId) {
-        appContent.innerHTML = '';
-        appContent.appendChild(renderPerfilView(usuarioActual, userId, () => renderComunidadView(usuarioActual, onRecetaImportada)));
-      }
+  // NAVEGAR AL PERFIL DEL USUARIO
+  function irAlPerfilCocinero(userId) {
+    const appContent = document.querySelector('.main-content');
+    if (appContent && userId) {
+      appContent.innerHTML = '';
+      appContent.appendChild(renderPerfilView(usuarioActual, userId, () => renderComunidadView(usuarioActual, onRecetaImportada)));
+    }
+  }
+
+  // FILTRADO POR CHIPS
+  container.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      categoriaFiltro = chip.getAttribute('data-cat');
+      cargarComunidad(inputBuscar.value);
+    });
+  });
+
+  function mostrarAvisoModal(titulo, mensaje, esError = false) {
+    modalTitle.innerText = titulo;
+    modalMsg.innerText = mensaje;
+
+    if (esError) {
+      modalIcon.style.background = '#fee2e2';
+      modalIcon.style.color = 'var(--danger)';
+      modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    } else {
+      modalIcon.style.background = 'var(--primary-light)';
+      modalIcon.style.color = 'var(--primary)';
+      modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     }
 
-    // FILTRADO POR CHIPS DE CATEGORÍA
-    container.querySelectorAll('.filter-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
+    modalNotif.classList.add('visible');
+  }
 
-        categoriaFiltro = chip.getAttribute('data-cat');
-        cargarComunidad(inputBuscar.value);
-      });
+  function abrirDetalleFeed(r, autorPublicador, autorOriginal) {
+    const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+    const esCompartida = autorOriginal && autorOriginal.id !== r.user_id;
+    const svgRepeat = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+
+    contenidoDetalle.innerHTML = `
+      ${imgHtml}
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" id="btnAbrirPerfilPublicadorModal">
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
+            ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
+          </div>
+          <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autorPublicador.username || 'usuario'}</span>
+        </div>
+      </div>
+
+      ${esCompartida ? `
+        <div id="btnAbrirPerfilOriginalModal" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 14px; cursor: pointer; border: 1px solid var(--border);">
+          <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Creada por:</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username}</span>
+        </div>
+      ` : ''}
+
+      <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+        ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.cart || '🛒'} Ingredientes
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.chef || '👨‍🍳'} Pasos
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
+      </div>
+    `;
+
+    contenidoDetalle.querySelector('#btnAbrirPerfilPublicadorModal').addEventListener('click', () => {
+      modalDetalle.classList.remove('visible');
+      irAlPerfilCocinero(autorPublicador.id);
     });
 
-    function mostrarAvisoModal(titulo, mensaje, esError = false) {
-      modalTitle.innerText = titulo;
-      modalMsg.innerText = mensaje;
-
-      if (esError) {
-        modalIcon.style.background = '#fee2e2';
-        modalIcon.style.color = 'var(--danger)';
-        modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-      } else {
-        modalIcon.style.background = 'var(--primary-light)';
-        modalIcon.style.color = 'var(--primary)';
-        modalIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-      }
-
-      modalNotif.classList.add('visible');
-    }
-
-    function abrirDetalleFeed(r, autorPublicador, autorOriginal) {
-      const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
-      const esCompartida = autorOriginal && autorOriginal.id !== r.user_id;
-
-      // ICONO VECTORIAL PARA EL MODAL DE DETALLE
-      const svgRepeat = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
-
-      contenidoDetalle.innerHTML = `
-        ${imgHtml}
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-          <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" id="btnAbrirPerfilPublicadorModal">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden;">
-              ${autorPublicador.avatar_url ? `<img src="${autorPublicador.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : (autorPublicador.username || 'U').charAt(0).toUpperCase()}
-            </div>
-            <span style="font-size: 13px; font-weight: 700; color: var(--primary);">@${autorPublicador.username || 'usuario'}</span>
-          </div>
-        </div>
-
-        ${esCompartida ? `
-          <div id="btnAbrirPerfilOriginalModal" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 14px; cursor: pointer; border: 1px solid var(--border);">
-            <span style="color: var(--primary); display: flex; align-items: center;">${svgRepeat}</span>
-            <span style="font-size: 11px; color: var(--text-muted);">Creada por:</span>
-            <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username}</span>
-          </div>
-        ` : ''}
-
-        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
-          ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
-        </div>
-
-        <div style="margin-bottom: 16px;">
-          <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.cart || '🛒'} Ingredientes
-          </h4>
-          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
-        </div>
-
-        <div>
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            ${icons.chef || '👨‍🍳'} Pasos
-          </h4>
-          <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
-        </div>
-      `;
-
-      contenidoDetalle.querySelector('#btnAbrirPerfilPublicadorModal').addEventListener('click', () => {
+    const btnOriginal = contenidoDetalle.querySelector('#btnAbrirPerfilOriginalModal');
+    if (btnOriginal) {
+      btnOriginal.addEventListener('click', () => {
         modalDetalle.classList.remove('visible');
-        irAlPerfilCocinero(autorPublicador.id);
+        irAlPerfilCocinero(autorOriginal.id);
       });
-
-      const btnOriginal = contenidoDetalle.querySelector('#btnAbrirPerfilOriginalModal');
-      if (btnOriginal) {
-        btnOriginal.addEventListener('click', () => {
-          modalDetalle.classList.remove('visible');
-          irAlPerfilCocinero(autorOriginal.id);
-        });
-      }
-
-      modalDetalle.classList.add('visible');
     }
 
-    async function cargarComunidad(busqueda = '') {
-      const termino = busqueda.toLowerCase().trim().replace('@', '');
-      const hayBusqueda = termino.length > 0;
+    modalDetalle.classList.add('visible');
+  }
 
-      const { data: relaciones } = await supabase
-        .from('seguidores')
-        .select('seguido_id, estado')
-        .eq('seguidor_id', usuarioActual.id);
+  async function cargarComunidad(busqueda = '') {
+    const termino = busqueda.toLowerCase().trim().replace('@', '');
+    const hayBusqueda = termino.length > 0;
+
+    gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
+
+    try {
+      // 1. OBTENER SEGUIDOS Y RECETAS PÚBLICAS SIMULTÁNEAMENTE (PETICIÓN LIGERA DE 15 RECETAS)
+      const [resRelaciones, resRecetas] = await Promise.all([
+        supabase.from('seguidores').select('seguido_id, estado').eq('seguidor_id', usuarioActual.id),
+        supabase.from('recetas')
+          .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url')
+          .eq('es_publica', true)
+          .order('created_at', { ascending: false })
+          .limit(15)
+      ]);
 
       const mapaRelaciones = {};
-      (relaciones || []).forEach(rel => {
+      (resRelaciones.data || []).forEach(rel => {
         mapaRelaciones[rel.seguido_id] = rel.estado || 'aceptado';
       });
 
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
 
-      // 1. BUSCADOR DE PERFILES
+      // 2. MOSTRAR RESULTADOS DE BÚSQUEDA
       if (hayBusqueda) {
         const { data: perfilesEncontrados } = await supabase
           .from('perfiles')
-          .select('*')
+          .select('id, username, avatar_url, nombre_completo')
           .neq('id', usuarioActual.id)
           .or(`username.ilike.%${termino}%,nombre_completo.ilike.%${termino}%`);
 
@@ -237,15 +243,11 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           secUsuarios.classList.remove('hidden');
           gridUsuarios.innerHTML = perfilesEncontrados.map(p => {
             const estado = mapaRelaciones[p.id];
-
-            let btnHtml = '';
-            if (estado === 'aceptado') {
-              btnHtml = `<span style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:5px 12px; border-radius:12px;">Siguiendo</span>`;
-            } else if (estado === 'pendiente') {
-              btnHtml = `<button disabled style="padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; background:var(--input-bg); color:var(--text-muted); border:1px solid var(--border); margin:0;">Solicitado</button>`;
-            } else {
-              btnHtml = `<button class="btn-enviar-solicitud btn-primary" data-id="${p.id}" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`;
-            }
+            let btnHtml = estado === 'aceptado' 
+              ? `<span style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:5px 12px; border-radius:12px;">Siguiendo</span>`
+              : (estado === 'pendiente' 
+                ? `<button disabled style="padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; background:var(--input-bg); color:var(--text-muted); border:1px solid var(--border); margin:0;">Solicitado</button>`
+                : `<button class="btn-enviar-solicitud btn-primary" data-id="${p.id}" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`);
 
             return `
               <div class="card card-perfil-item" data-id="${p.id}" style="padding:12px 14px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer;">
@@ -264,10 +266,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           }).join('');
 
           gridUsuarios.querySelectorAll('.area-click-perfil').forEach(area => {
-            area.addEventListener('click', () => {
-              const pId = area.getAttribute('data-id');
-              if (pId) irAlPerfilCocinero(pId);
-            });
+            area.addEventListener('click', () => irAlPerfilCocinero(area.getAttribute('data-id')));
           });
 
           gridUsuarios.querySelectorAll('.btn-enviar-solicitud').forEach(btn => {
@@ -307,62 +306,40 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
-      // 2. RECETAS DE USUARIOS ACEPTADOS
-      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
+      // 3. FILTRAR EN MEMORIA LOCAL SÓLO LAS RECETAS DE AMIGOS ACEPTADOS
+      const recetasComunidad = (resRecetas.data || []).filter(r => idsAceptados.includes(r.user_id));
 
-      if (idsAceptados.length === 0) {
+      if (recetasComunidad.length === 0) {
         gridFeed.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
-            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no tienes recetas para mostrar</p>
-            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
+          <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Sin publicaciones recientes</p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Tus cocineros seguidos aún no han compartido recetas públicas.</p>
           </div>
         `;
         return;
       }
 
-      const { data: recetas, error: errRecetas } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('es_publica', true)
-        .in('user_id', idsAceptados)
-        .order('created_at', { ascending: false });
-
-      if (errRecetas || !recetas || recetas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Los cocineros a los que sigues no han publicado recetas todavía.</p>';
-        return;
-      }
-
-      // CONSULTAR PERFILES DE AUTORES PUBLICADORES Y AUTORES ORIGINARIOS
-      const idsPerfilesRequeridos = new Set();
-      recetas.forEach(r => {
-        if (r.user_id) idsPerfilesRequeridos.add(r.user_id);
-        if (r.autor_original_id) idsPerfilesRequeridos.add(r.autor_original_id);
-      });
-
-      const { data: perfilesObtenidos } = await supabase
+      // 4. DESCARGAR PERFILES DE LOS AUTORES (EN UNA SOLA CONSULTA RÁPIDA)
+      const idsPerfiles = [...new Set(recetasComunidad.flatMap(r => [r.user_id, r.autor_original_id].filter(Boolean)))];
+      const { data: perfiles } = await supabase
         .from('perfiles')
-        .select('*')
-        .in('id', Array.from(idsPerfilesRequeridos));
+        .select('id, username, avatar_url')
+        .in('id', idsPerfiles);
 
       const mapaPerfiles = {};
-      (perfilesObtenidos || []).forEach(p => { mapaPerfiles[p.id] = p; });
+      (perfiles || []).forEach(p => { mapaPerfiles[p.id] = p; });
 
-      let recetasFiltradas = recetas.filter(r => {
-        const matchNombre = r.nombre ? r.nombre.toLowerCase().includes(termino) : false;
-        const matchIng = r.ingredientes ? r.ingredientes.toLowerCase().includes(termino) : false;
-        const matchTexto = hayBusqueda ? (matchNombre || matchIng) : true;
-
+      let recetasFiltradas = recetasComunidad.filter(r => {
+        const matchTexto = !hayBusqueda || (r.nombre && r.nombre.toLowerCase().includes(termino)) || (r.ingredientes && r.ingredientes.toLowerCase().includes(termino));
         const matchCat = categoriaFiltro === 'Todos' || (r.categorias && r.categorias.toLowerCase().includes(categoriaFiltro.toLowerCase()));
-        
         return matchTexto && matchCat;
       });
 
       if (recetasFiltradas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No se encontraron recetas coincidentes en esta categoría.</p>';
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas en esta categoría.</p>';
         return;
       }
 
-      // ICONO VECTORIAL SVG DE "REPOST / SHARE"
       const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
 
       gridFeed.innerHTML = recetasFiltradas.map(r => {
@@ -375,7 +352,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           : 'Sin ingredientes especificados';
 
         return `
-          <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
+          <div class="card card-receta-feed" data-id="${r.id}" style="padding: 12px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; width: 100%; box-sizing: border-box; cursor: pointer;">
             <div>
               ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;" />` : ''}
               
@@ -402,7 +379,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
               <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h3>
               <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>${r.tiempo_preparacion || 15} min</span>
               </p>
 
@@ -416,8 +393,8 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               </div>
             </div>
 
-            <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <button class="btn-importar-receta btn-outline" data-id="${r.id}" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
               <span>Guardar en Mis Recetas</span>
             </button>
           </div>
@@ -445,11 +422,9 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           }
 
           const id = card.getAttribute('data-id');
-          const recetaSel = recetas.find(item => item.id === id);
+          const recetaSel = recetasComunidad.find(item => item.id === id);
           if (recetaSel) {
-            const autorPublicador = mapaPerfiles[recetaSel.user_id] || {};
-            const autorOriginal = recetaSel.autor_original_id ? mapaPerfiles[recetaSel.autor_original_id] : null;
-            abrirDetalleFeed(recetaSel, autorPublicador, autorOriginal);
+            abrirDetalleFeed(recetaSel, mapaPerfiles[recetaSel.user_id] || {}, recetaSel.autor_original_id ? mapaPerfiles[recetaSel.autor_original_id] : null);
           }
         });
       });
@@ -476,13 +451,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            // Mantiene el creador inicial si ya era una receta compartida
             const idCreadorOriginal = recetaOriginal.autor_original_id || recetaOriginal.user_id;
             const idRecetaPadre = recetaOriginal.receta_original_id || recetaOriginal.id;
             const autorCreador = mapaPerfiles[idCreadorOriginal] || {};
             const tagCreador = autorCreador.username ? `@${autorCreador.username}` : 'autor original';
-
-            // Nombre sin añadidos de texto
             const nombreLimpio = recetaOriginal.nombre.replace(/\s*\(de @[^)]+\)/gi, '');
 
             const nuevaRecetaPayload = {
@@ -509,7 +481,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
               return;
             }
 
-            // Notificar al autor original de que su receta fue guardada
             if (idCreadorOriginal && idCreadorOriginal !== usuarioActual.id) {
               await supabase.from('notificaciones').insert([{
                 user_id: idCreadorOriginal,
@@ -533,14 +504,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           }
         });
       });
+
+    } catch (err) {
+      console.error("Error al cargar la comunidad:", err);
+      gridFeed.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Error al cargar las publicaciones.</p>';
     }
+  }
 
-    inputBuscar.addEventListener('input', (e) => {
-      cargarComunidad(e.target.value);
-    });
+  inputBuscar.addEventListener('input', (e) => {
+    cargarComunidad(e.target.value);
+  });
 
-    cargarComunidad();
-  }, 0);
+  cargarComunidad();
 
   return container;
 }
