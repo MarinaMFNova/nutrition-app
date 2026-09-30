@@ -2,6 +2,9 @@ import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 import { renderPerfilView } from './perfil.js';
 
+// ⚡ VARIABLE EN MEMORIA PARA CONSERVAR EL ESTADO ENTRE CAMBIOS DE PESTAÑA
+let cacheComunidadMemoria = null;
+
 export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const container = document.createElement('div');
   container.className = 'container';
@@ -126,7 +129,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       chip.classList.add('active');
 
       categoriaFiltro = chip.getAttribute('data-cat');
-      cargarComunidad(inputBuscar.value);
+      cargarComunidad(inputBuscar.value, true);
     });
   });
 
@@ -371,12 +374,19 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     });
   }
 
-  async function cargarComunidad(busqueda = '') {
+  async function cargarComunidad(busqueda = '', forzarRecarga = false) {
     const termino = busqueda.toLowerCase().trim().replace('@', '');
     const hayBusqueda = termino.length > 0;
 
+    // ⚡ PASO 1: SI TENEMOS CACHÉ EN MEMORIA Y NO HAY BÚSQUEDA / FILTRO, RENDERIZAR EN 0 MS
+    if (cacheComunidadMemoria && !hayBusqueda && categoriaFiltro === 'Todos' && !forzarRecarga) {
+      renderizarListaFeed(cacheComunidadMemoria.recetasFiltradas, cacheComunidadMemoria.mapaPerfiles);
+    } else if (!cacheComunidadMemoria || hayBusqueda || categoriaFiltro !== 'Todos') {
+      gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
+    }
+
     try {
-      // 1. PETICIÓN LIGERA
+      // ⚡ PASO 2: CONSULTA EN SEGUNDO PLANO A SUPABASE
       const [resRelaciones, resRecetas] = await Promise.all([
         supabase.from('seguidores').select('seguido_id, estado').eq('seguidor_id', usuarioActual.id),
         supabase.from('recetas')
@@ -474,11 +484,18 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         return;
       }
 
+      // ⚡ GUARDAR EN MEMORIA PARA CAMBIOS RÁPIDOS DE PESTAÑA
+      if (!hayBusqueda && categoriaFiltro === 'Todos') {
+        cacheComunidadMemoria = { recetasFiltradas, mapaPerfiles };
+      }
+
       renderizarListaFeed(recetasFiltradas, mapaPerfiles);
 
     } catch (err) {
       console.error("Error al cargar la comunidad:", err);
-      gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las publicaciones: ${err.message || 'Comprueba tu conexión'}</p>`;
+      if (!cacheComunidadMemoria) {
+        gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las publicaciones: ${err.message || 'Comprueba tu conexión'}</p>`;
+      }
     }
   }
 

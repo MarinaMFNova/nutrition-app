@@ -1,6 +1,9 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
+// ⚡ CACHÉ EN MEMORIA PARA CONSERVAR LOS DATOS DE PERFILES CONSULTADOS
+let cachePerfilesMemoria = {};
+
 export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen = null) {
   const container = document.createElement('div');
   container.className = 'container';
@@ -11,6 +14,8 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
   let avatarBase64 = null;
   let mostrandoCambioPass = false;
+
+  const datosCached = cachePerfilesMemoria[perfilId];
 
   container.innerHTML = `
     <!-- CABECERA DE LA PÁGINA CON BOTÓN DE VOLVER INTELIGENTE -->
@@ -42,18 +47,22 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
           
           <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
             <div id="avatarContainer" style="width: 76px; height: 76px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 3px solid var(--primary); flex-shrink: 0; overflow: hidden; box-shadow: var(--shadow);">
-              ${icons.user}
+              ${datosCached && datosCached.perfil?.avatar_url ? `<img src="${datosCached.perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />` : icons.user}
             </div>
             
             <div style="min-width: 0; flex: 1;">
-              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main); line-height: 1.2; word-break: break-word;">Cargando...</h2>
-              <div id="lblUsername" style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 2px;">@...</div>
-              <!-- CORREO COMPLETO SIN RECORTE -->
-              <div id="lblEmail" style="font-size: 11px; color: var(--text-muted); margin-top: 2px; word-break: break-all; line-height: 1.3;"></div>
+              <h2 id="lblNombreCompleto" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main); line-height: 1.2; word-break: break-word;">
+                ${datosCached ? (datosCached.perfil?.nombre_completo || 'Usuario de BiteLife') : 'Cargando...'}
+              </h2>
+              <div id="lblUsername" style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 2px;">
+                ${datosCached ? `@${datosCached.perfil?.username || 'usuario'}` : '@...'}
+              </div>
+              <div id="lblEmail" style="font-size: 11px; color: var(--text-muted); margin-top: 2px; word-break: break-all; line-height: 1.3;">
+                ${esMiPerfil ? usuarioActual.email : ''}
+              </div>
             </div>
           </div>
 
-          <!-- BOTÓN COMPACTADO A SOLO "EDITAR" PARA GANAR ESPACIO -->
           <div style="flex-shrink: 0;">
             ${esMiPerfil ? `
               <button id="btnAbrirModalEditar" class="btn-outline" style="width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
@@ -71,17 +80,17 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         <!-- BLOQUE INFERIOR: CONTADORES SOCIALES -->
         <div style="display: flex; justify-content: space-around; align-items: center; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; width: 100%;">
           <div style="cursor: pointer; flex: 1;" id="btnVerSeguidores">
-            <div id="cntSeguidores" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
+            <div id="cntSeguidores" style="font-size: 18px; font-weight: 800; color: var(--text-main);">${datosCached ? datosCached.seguidores : '0'}</div>
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Seguidores</div>
           </div>
           <div style="width: 1px; height: 24px; background: var(--border);"></div>
           <div style="cursor: pointer; flex: 1;" id="btnVerSiguiendo">
-            <div id="cntSiguiendo" style="font-size: 18px; font-weight: 800; color: var(--text-main);">0</div>
+            <div id="cntSiguiendo" style="font-size: 18px; font-weight: 800; color: var(--text-main);">${datosCached ? datosCached.siguiendo : '0'}</div>
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Siguiendo</div>
           </div>
           <div style="width: 1px; height: 24px; background: var(--border);"></div>
           <div style="flex: 1;">
-            <div id="cntRecetasPublicas" style="font-size: 18px; font-weight: 800; color: var(--primary);">0</div>
+            <div id="cntRecetasPublicas" style="font-size: 18px; font-weight: 800; color: var(--primary);">${datosCached ? datosCached.cPublicas : '0'}</div>
             <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Públicas</div>
           </div>
         </div>
@@ -102,7 +111,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
     <!-- SECCIÓN 1: MIS RECETAS PÚBLICAS -->
     <div id="secMisPublicas">
       <div id="gridMisPublicas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;">
-        Cargando recetas...
+        ${datosCached && datosCached.publicas ? '' : 'Cargando recetas...'}
       </div>
     </div>
 
@@ -221,528 +230,545 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
     ` : ''}
   `;
 
-  setTimeout(() => {
-    // ACCIÓN DEL BOTÓN VOLVER
-    const btnVolver = container.querySelector('#btnVolverAtras');
-    if (btnVolver) {
-      btnVolver.addEventListener('click', () => {
-        const appContent = document.querySelector('.main-content');
-        if (appContent) {
-          appContent.innerHTML = '';
-          if (typeof vistaOrigen === 'function') {
-            appContent.appendChild(vistaOrigen());
-          } else {
-            appContent.appendChild(renderPerfilView(usuarioActual, usuarioActual.id));
-          }
-        }
-      });
-    }
+  // ELEMENTOS
+  const lblNombre = container.querySelector('#lblNombreCompleto');
+  const lblUser = container.querySelector('#lblUsername');
+  const lblEmail = container.querySelector('#lblEmail');
+  const avatarBox = container.querySelector('#avatarContainer');
 
-    const lblNombre = container.querySelector('#lblNombreCompleto');
-    const lblUser = container.querySelector('#lblUsername');
-    const lblEmail = container.querySelector('#lblEmail');
-    const avatarBox = container.querySelector('#avatarContainer');
+  const cntSeguidores = container.querySelector('#cntSeguidores');
+  const cntSiguiendo = container.querySelector('#cntSiguiendo');
+  const cntPublicas = container.querySelector('#cntRecetasPublicas');
 
-    const cntSeguidores = container.querySelector('#cntSeguidores');
-    const cntSiguiendo = container.querySelector('#cntSiguiendo');
-    const cntPublicas = container.querySelector('#cntRecetasPublicas');
+  const secPublicas = container.querySelector('#secMisPublicas');
+  const secSocial = container.querySelector('#secListaSeguidores');
 
-    const secPublicas = container.querySelector('#secMisPublicas');
-    const secSocial = container.querySelector('#secListaSeguidores');
+  const tabPublicas = container.querySelector('#tabBtnMisPublicas');
+  const tabSocial = container.querySelector('#tabBtnListaSeguidores');
 
-    const tabPublicas = container.querySelector('#tabBtnMisPublicas');
-    const tabSocial = container.querySelector('#tabBtnListaSeguidores');
-
-    // BOTÓN DE SEGUIR EN PERFIL AJENO
-    const btnSeguir = container.querySelector('#btnSeguirUsuario');
-    if (btnSeguir) {
-      comprobarEstadoSeguimiento();
-      btnSeguir.addEventListener('click', toggleSeguirUsuario);
-    }
-
-    async function comprobarEstadoSeguimiento() {
-      const { data } = await supabase
-        .from('seguidores')
-        .select('*')
-        .eq('seguidor_id', usuarioActual.id)
-        .eq('seguido_id', perfilId)
-        .maybeSingle();
-
-      if (data) {
-        btnSeguir.innerText = 'Siguiendo';
-        btnSeguir.className = 'btn-outline';
-        btnSeguir.style.color = 'var(--text-muted)';
-      } else {
-        btnSeguir.innerText = 'Seguir';
-        btnSeguir.className = 'btn-primary';
-        btnSeguir.style.color = 'white';
-      }
-    }
-
-    async function toggleSeguirUsuario() {
-      const { data } = await supabase
-        .from('seguidores')
-        .select('*')
-        .eq('seguidor_id', usuarioActual.id)
-        .eq('seguido_id', perfilId)
-        .maybeSingle();
-
-      if (data) {
-        await supabase.from('seguidores').delete().eq('id', data.id);
-      } else {
-        await supabase.from('seguidores').insert([{
-          seguidor_id: usuarioActual.id,
-          seguido_id: perfilId
-        }]);
-      }
-      comprobarEstadoSeguimiento();
-      cargarPerfil();
-    }
-
-    // GESTIÓN DEL MODAL DE EDICIÓN Y CONTRASEÑA (SÓLO PROPIETARIO)
-    if (esMiPerfil) {
-      const modalEditar = container.querySelector('#modalEditarPerfil');
-      const modalEliminar = container.querySelector('#modalConfirmarEliminar');
-      const btnAbrirModal = container.querySelector('#btnAbrirModalEditar');
-      const btnCloseModal = container.querySelector('#btnCloseModalEditar');
-      const btnCancelarModal = container.querySelector('#btnCancelarModal');
-      const btnEliminarCuenta = container.querySelector('#btnEliminarCuenta');
-      const btnCancelarEliminar = container.querySelector('#btnCancelarEliminarModal');
-      const btnConfirmarEliminar = container.querySelector('#btnConfirmarEliminarModal');
-      const btnToggleSeccionPass = container.querySelector('#btnToggleSeccionPass');
-      const secCambiarPassword = container.querySelector('#secCambiarPassword');
-
-      const inputUsername = container.querySelector('#inputUsername');
-      const inputNombreCompleto = container.querySelector('#inputNombreCompleto');
-      const inputNuevaPassword = container.querySelector('#inputNuevaPassword');
-      const inputConfirmarPassword = container.querySelector('#inputConfirmarPassword');
-      const btnTogglePass1 = container.querySelector('#btnTogglePass1');
-      const btnTogglePass2 = container.querySelector('#btnTogglePass2');
-      const inputAvatarFile = container.querySelector('#inputAvatarFile');
-      const avatarPreviewBox = container.querySelector('#avatarPreviewBox');
-      const form = container.querySelector('#formPerfil');
-      const msg = container.querySelector('#msgPerfil');
-
-      btnTogglePass1.addEventListener('click', () => {
-        inputNuevaPassword.type = inputNuevaPassword.type === 'password' ? 'text' : 'password';
-      });
-
-      btnTogglePass2.addEventListener('click', () => {
-        inputConfirmarPassword.type = inputConfirmarPassword.type === 'password' ? 'text' : 'password';
-      });
-
-      btnToggleSeccionPass.addEventListener('click', () => {
-        mostrandoCambioPass = !mostrandoCambioPass;
-        if (mostrandoCambioPass) {
-          secCambiarPassword.classList.remove('hidden');
-          btnToggleSeccionPass.style.background = 'var(--primary-light)';
-          btnToggleSeccionPass.style.color = 'var(--primary)';
-          btnToggleSeccionPass.style.borderColor = 'var(--primary)';
+  const btnVolver = container.querySelector('#btnVolverAtras');
+  if (btnVolver) {
+    btnVolver.addEventListener('click', () => {
+      const appContent = document.querySelector('.main-content');
+      if (appContent) {
+        appContent.innerHTML = '';
+        if (typeof vistaOrigen === 'function') {
+          appContent.appendChild(vistaOrigen());
         } else {
-          secCambiarPassword.classList.add('hidden');
-          btnToggleSeccionPass.style.background = 'transparent';
-          btnToggleSeccionPass.style.color = 'var(--text-main)';
-          btnToggleSeccionPass.style.borderColor = 'var(--border)';
-          inputNuevaPassword.value = '';
-          inputConfirmarPassword.value = '';
+          appContent.appendChild(renderPerfilView(usuarioActual, usuarioActual.id));
         }
-      });
+      }
+    });
+  }
 
-      btnAbrirModal.addEventListener('click', () => modalEditar.classList.add('visible'));
+  const btnSeguir = container.querySelector('#btnSeguirUsuario');
+  if (btnSeguir) {
+    comprobarEstadoSeguimiento();
+    btnSeguir.addEventListener('click', toggleSeguirUsuario);
+  }
 
-      function cerrarModalAjustes() {
-        modalEditar.classList.remove('visible');
-        mostrandoCambioPass = false;
+  async function comprobarEstadoSeguimiento() {
+    const { data } = await supabase
+      .from('seguidores')
+      .select('*')
+      .eq('seguidor_id', usuarioActual.id)
+      .eq('seguido_id', perfilId)
+      .maybeSingle();
+
+    if (data) {
+      btnSeguir.innerText = 'Siguiendo';
+      btnSeguir.className = 'btn-outline';
+      btnSeguir.style.color = 'var(--text-muted)';
+    } else {
+      btnSeguir.innerText = 'Seguir';
+      btnSeguir.className = 'btn-primary';
+      btnSeguir.style.color = 'white';
+    }
+  }
+
+  async function toggleSeguirUsuario() {
+    const { data } = await supabase
+      .from('seguidores')
+      .select('*')
+      .eq('seguidor_id', usuarioActual.id)
+      .eq('seguido_id', perfilId)
+      .maybeSingle();
+
+    if (data) {
+      await supabase.from('seguidores').delete().eq('id', data.id);
+    } else {
+      await supabase.from('seguidores').insert([{
+        seguidor_id: usuarioActual.id,
+        seguido_id: perfilId
+      }]);
+    }
+    comprobarEstadoSeguimiento();
+    cargarPerfil();
+  }
+
+  if (esMiPerfil) {
+    const modalEditar = container.querySelector('#modalEditarPerfil');
+    const modalEliminar = container.querySelector('#modalConfirmarEliminar');
+    const btnAbrirModal = container.querySelector('#btnAbrirModalEditar');
+    const btnCloseModal = container.querySelector('#btnCloseModalEditar');
+    const btnCancelarModal = container.querySelector('#btnCancelarModal');
+    const btnEliminarCuenta = container.querySelector('#btnEliminarCuenta');
+    const btnCancelarEliminar = container.querySelector('#btnCancelarEliminarModal');
+    const btnConfirmarEliminar = container.querySelector('#btnConfirmarEliminarModal');
+    const btnToggleSeccionPass = container.querySelector('#btnToggleSeccionPass');
+    const secCambiarPassword = container.querySelector('#secCambiarPassword');
+
+    const inputUsername = container.querySelector('#inputUsername');
+    const inputNombreCompleto = container.querySelector('#inputNombreCompleto');
+    const inputNuevaPassword = container.querySelector('#inputNuevaPassword');
+    const inputConfirmarPassword = container.querySelector('#inputConfirmarPassword');
+    const btnTogglePass1 = container.querySelector('#btnTogglePass1');
+    const btnTogglePass2 = container.querySelector('#btnTogglePass2');
+    const inputAvatarFile = container.querySelector('#inputAvatarFile');
+    const avatarPreviewBox = container.querySelector('#avatarPreviewBox');
+    const form = container.querySelector('#formPerfil');
+    const msg = container.querySelector('#msgPerfil');
+
+    btnTogglePass1.addEventListener('click', () => {
+      inputNuevaPassword.type = inputNuevaPassword.type === 'password' ? 'text' : 'password';
+    });
+
+    btnTogglePass2.addEventListener('click', () => {
+      inputConfirmarPassword.type = inputConfirmarPassword.type === 'password' ? 'text' : 'password';
+    });
+
+    btnToggleSeccionPass.addEventListener('click', () => {
+      mostrandoCambioPass = !mostrandoCambioPass;
+      if (mostrandoCambioPass) {
+        secCambiarPassword.classList.remove('hidden');
+        btnToggleSeccionPass.style.background = 'var(--primary-light)';
+        btnToggleSeccionPass.style.color = 'var(--primary)';
+        btnToggleSeccionPass.style.borderColor = 'var(--primary)';
+      } else {
         secCambiarPassword.classList.add('hidden');
         btnToggleSeccionPass.style.background = 'transparent';
         btnToggleSeccionPass.style.color = 'var(--text-main)';
         btnToggleSeccionPass.style.borderColor = 'var(--border)';
         inputNuevaPassword.value = '';
         inputConfirmarPassword.value = '';
-        msg.style.display = 'none';
       }
+    });
 
-      btnCloseModal.addEventListener('click', cerrarModalAjustes);
-      btnCancelarModal.addEventListener('click', cerrarModalAjustes);
-      modalEditar.addEventListener('click', (e) => { if (e.target === modalEditar) cerrarModalAjustes(); });
+    btnAbrirModal.addEventListener('click', () => modalEditar.classList.add('visible'));
 
-      btnEliminarCuenta.addEventListener('click', () => modalEliminar.classList.add('visible'));
-      btnCancelarEliminar.addEventListener('click', () => modalEliminar.classList.remove('visible'));
-      modalEliminar.addEventListener('click', (e) => { if (e.target === modalEliminar) modalEliminar.classList.remove('visible'); });
+    function cerrarModalAjustes() {
+      modalEditar.classList.remove('visible');
+      mostrandoCambioPass = false;
+      secCambiarPassword.classList.add('hidden');
+      btnToggleSeccionPass.style.background = 'transparent';
+      btnToggleSeccionPass.style.color = 'var(--text-main)';
+      btnToggleSeccionPass.style.borderColor = 'var(--border)';
+      inputNuevaPassword.value = '';
+      inputConfirmarPassword.value = '';
+      msg.style.display = 'none';
+    }
 
-      btnConfirmarEliminar.addEventListener('click', async () => {
-        btnConfirmarEliminar.disabled = true;
-        btnConfirmarEliminar.innerText = 'Eliminando...';
+    btnCloseModal.addEventListener('click', cerrarModalAjustes);
+    btnCancelarModal.addEventListener('click', cerrarModalAjustes);
+    modalEditar.addEventListener('click', (e) => { if (e.target === modalEditar) cerrarModalAjustes(); });
 
-        try {
-          const { error: rpcErr } = await supabase.rpc('borrar_cuenta_usuario');
-          if (rpcErr) {
-            alert('Error al eliminar la cuenta: ' + rpcErr.message);
-            btnConfirmarEliminar.disabled = false;
-            btnConfirmarEliminar.innerText = 'Sí, eliminar';
-            modalEliminar.classList.remove('visible');
-            return;
-          }
-          await supabase.auth.signOut();
-          window.location.reload();
-        } catch (err) {
-          alert('Error inesperado: ' + err.message);
+    btnEliminarCuenta.addEventListener('click', () => modalEliminar.classList.add('visible'));
+    btnCancelarEliminar.addEventListener('click', () => modalEliminar.classList.remove('visible'));
+    modalEliminar.addEventListener('click', (e) => { if (e.target === modalEliminar) modalEliminar.classList.remove('visible'); });
+
+    btnConfirmarEliminar.addEventListener('click', async () => {
+      btnConfirmarEliminar.disabled = true;
+      btnConfirmarEliminar.innerText = 'Eliminando...';
+
+      try {
+        const { error: rpcErr } = await supabase.rpc('borrar_cuenta_usuario');
+        if (rpcErr) {
+          alert('Error al eliminar la cuenta: ' + rpcErr.message);
           btnConfirmarEliminar.disabled = false;
           btnConfirmarEliminar.innerText = 'Sí, eliminar';
           modalEliminar.classList.remove('visible');
+          return;
         }
+        await supabase.auth.signOut();
+        window.location.reload();
+      } catch (err) {
+        alert('Error inesperado: ' + err.message);
+        btnConfirmarEliminar.disabled = false;
+        btnConfirmarEliminar.innerText = 'Sí, eliminar';
+        modalEliminar.classList.remove('visible');
+      }
+    });
+
+    inputAvatarFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          avatarBase64 = event.target.result;
+          avatarPreviewBox.innerHTML = `<img src="${avatarBase64}" style="width:100%; height:100%; object-fit:cover;" />`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const usernameLimpio = inputUsername.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const nombreCompleto = inputNombreCompleto.value.trim();
+      const pass1 = inputNuevaPassword.value;
+      const pass2 = inputConfirmarPassword.value;
+
+      if (!usernameLimpio) {
+        msg.style.display = 'block';
+        msg.style.background = '#fee2e2';
+        msg.style.color = 'var(--danger)';
+        msg.innerText = 'Username no válido.';
+        return;
+      }
+
+      const { error: perfilErr } = await supabase.from('perfiles').upsert({
+        id: usuarioActual.id,
+        username: usernameLimpio,
+        nombre_completo: nombreCompleto,
+        avatar_url: avatarBase64
       });
 
-      inputAvatarFile.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            avatarBase64 = event.target.result;
-            avatarPreviewBox.innerHTML = `<img src="${avatarBase64}" style="width:100%; height:100%; object-fit:cover;" />`;
-          };
-          reader.readAsDataURL(file);
-        }
-      });
+      if (perfilErr) {
+        msg.style.display = 'block';
+        msg.style.background = '#fee2e2';
+        msg.style.color = 'var(--danger)';
+        msg.innerText = perfilErr.code === '23505' ? 'El nombre de usuario ya está ocupado.' : 'Error al guardar el perfil.';
+        return;
+      }
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const usernameLimpio = inputUsername.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-        const nombreCompleto = inputNombreCompleto.value.trim();
-        const pass1 = inputNuevaPassword.value;
-        const pass2 = inputConfirmarPassword.value;
-
-        if (!usernameLimpio) {
+      if (mostrandoCambioPass) {
+        if (!pass1 || !pass2) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = 'Username no válido.';
+          msg.innerText = 'Debes rellenar los dos campos de contraseña.';
           return;
         }
 
-        const { error: perfilErr } = await supabase.from('perfiles').upsert({
-          id: usuarioActual.id,
-          username: usernameLimpio,
-          nombre_completo: nombreCompleto,
-          avatar_url: avatarBase64
-        });
-
-        if (perfilErr) {
+        if (pass1 !== pass2) {
           msg.style.display = 'block';
           msg.style.background = '#fee2e2';
           msg.style.color = 'var(--danger)';
-          msg.innerText = perfilErr.code === '23505' ? 'El nombre de usuario ya está ocupado.' : 'Error al guardar el perfil.';
+          msg.innerText = 'Las contraseñas escritas no coinciden. Por favor, revísalas.';
           return;
         }
 
-        if (mostrandoCambioPass) {
-          if (!pass1 || !pass2) {
-            msg.style.display = 'block';
-            msg.style.background = '#fee2e2';
-            msg.style.color = 'var(--danger)';
-            msg.innerText = 'Debes rellenar los dos campos de contraseña.';
-            return;
-          }
-
-          if (pass1 !== pass2) {
-            msg.style.display = 'block';
-            msg.style.background = '#fee2e2';
-            msg.style.color = 'var(--danger)';
-            msg.innerText = 'Las contraseñas escritas no coinciden. Por favor, revísalas.';
-            return;
-          }
-
-          const regEspecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
-          if (pass1.length < 6 || !/[A-Z]/.test(pass1) || !/[0-9]/.test(pass1) || !regEspecial.test(pass1)) {
-            msg.style.display = 'block';
-            msg.style.background = '#fee2e2';
-            msg.style.color = 'var(--danger)';
-            msg.innerText = 'La contraseña debe tener mínimo 6 caracteres, 1 mayúscula, 1 número y 1 carácter especial.';
-            return;
-          }
-
-          const { error: passErr } = await supabase.auth.updateUser({ password: pass1 });
-          if (passErr) {
-            msg.style.display = 'block';
-            msg.style.background = '#fee2e2';
-            msg.style.color = 'var(--danger)';
-            msg.innerText = 'Error actualizando contraseña: ' + passErr.message;
-            return;
-          }
-
+        const regEspecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+        if (pass1.length < 6 || !/[A-Z]/.test(pass1) || !/[0-9]/.test(pass1) || !regEspecial.test(pass1)) {
           msg.style.display = 'block';
-          msg.style.background = 'var(--primary-light)';
-          msg.style.color = 'var(--primary)';
-          msg.innerText = 'Contraseña cambiada con éxito. Cerrando sesión por seguridad...';
+          msg.style.background = '#fee2e2';
+          msg.style.color = 'var(--danger)';
+          msg.innerText = 'La contraseña debe tener mínimo 6 caracteres, 1 mayúscula, 1 número y 1 carácter especial.';
+          return;
+        }
 
-          setTimeout(async () => {
-            await supabase.auth.signOut();
-            window.location.reload();
-          }, 2000);
+        const { error: passErr } = await supabase.auth.updateUser({ password: pass1 });
+        if (passErr) {
+          msg.style.display = 'block';
+          msg.style.background = '#fee2e2';
+          msg.style.color = 'var(--danger)';
+          msg.innerText = 'Error actualizando contraseña: ' + passErr.message;
           return;
         }
 
         msg.style.display = 'block';
         msg.style.background = 'var(--primary-light)';
         msg.style.color = 'var(--primary)';
-        msg.innerText = '¡Ajustes e información guardados con éxito!';
+        msg.innerText = 'Contraseña cambiada con éxito. Cerrando sesión por seguridad...';
 
-        setTimeout(() => {
-          cerrarModalAjustes();
-          cargarPerfil();
-        }, 1000);
-      });
+        setTimeout(async () => {
+          await supabase.auth.signOut();
+          window.location.reload();
+        }, 2000);
+        return;
+      }
+
+      msg.style.display = 'block';
+      msg.style.background = 'var(--primary-light)';
+      msg.style.color = 'var(--primary)';
+      msg.innerText = '¡Ajustes e información guardados con éxito!';
+
+      setTimeout(() => {
+        cerrarModalAjustes();
+        cargarPerfil();
+      }, 1000);
+    });
+  }
+
+  function cambiarPestana(activa) {
+    [secPublicas, secSocial].forEach(s => s.classList.add('hidden'));
+    [tabPublicas, tabSocial].forEach(t => {
+      t.style.background = 'transparent';
+      t.style.color = 'var(--text-main)';
+      t.style.borderColor = 'var(--border)';
+    });
+
+    if (activa === 'publicas') {
+      secPublicas.classList.remove('hidden');
+      tabPublicas.style.background = 'var(--primary-light)';
+      tabPublicas.style.color = 'var(--primary)';
+      tabPublicas.style.borderColor = 'var(--primary)';
+      cargarMisRecetasPublicas();
+    } else if (activa === 'social') {
+      secSocial.classList.remove('hidden');
+      tabSocial.style.background = 'var(--primary-light)';
+      tabSocial.style.color = 'var(--primary)';
+      tabSocial.style.borderColor = 'var(--primary)';
+      cargarListasSociales();
     }
+  }
 
-    function cambiarPestana(activa) {
-      [secPublicas, secSocial].forEach(s => s.classList.add('hidden'));
-      [tabPublicas, tabSocial].forEach(t => {
-        t.style.background = 'transparent';
-        t.style.color = 'var(--text-main)';
-        t.style.borderColor = 'var(--border)';
-      });
+  tabPublicas.addEventListener('click', () => cambiarPestana('publicas'));
+  tabSocial.addEventListener('click', () => cambiarPestana('social'));
+  container.querySelector('#btnVerSeguidores').addEventListener('click', () => cambiarPestana('social'));
+  container.querySelector('#btnVerSiguiendo').addEventListener('click', () => cambiarPestana('social'));
 
-      if (activa === 'publicas') {
-        secPublicas.classList.remove('hidden');
-        tabPublicas.style.background = 'var(--primary-light)';
-        tabPublicas.style.color = 'var(--primary)';
-        tabPublicas.style.borderColor = 'var(--primary)';
-        cargarMisRecetasPublicas();
-      } else if (activa === 'social') {
-        secSocial.classList.remove('hidden');
-        tabSocial.style.background = 'var(--primary-light)';
-        tabSocial.style.color = 'var(--primary)';
-        tabSocial.style.borderColor = 'var(--primary)';
-        cargarListasSociales();
+  // ⚡ CARGA EN PARALELO DE LOS DATOS DE PERFIL Y CONTADORES
+  async function cargarPerfil() {
+    const [resPerfil, resSeguidores, resSiguiendo, resPublicas] = await Promise.all([
+      supabase.from('perfiles').select('*').eq('id', perfilId).single(),
+      supabase.from('seguidores').select('seguidor_id').eq('seguido_id', perfilId),
+      supabase.from('seguidores').select('seguido_id').eq('seguidor_id', perfilId),
+      supabase.from('recetas').select('*', { count: 'exact', head: true }).eq('user_id', perfilId).eq('es_publica', true)
+    ]);
+
+    const perfil = resPerfil.data;
+    const seguidores = resSeguidores.data ? resSeguidores.data.length : 0;
+    const siguiendo = resSiguiendo.data ? resSiguiendo.data.length : 0;
+    const cPublicas = resPublicas.count || 0;
+
+    if (perfil) {
+      lblNombre.innerText = perfil.nombre_completo || 'Usuario de BiteLife';
+      lblUser.innerText = `@${perfil.username || 'usuario'}`;
+      if (lblEmail) lblEmail.innerText = esMiPerfil ? usuarioActual.email : '';
+
+      if (esMiPerfil) {
+        const inputUsername = container.querySelector('#inputUsername');
+        const inputNombreCompleto = container.querySelector('#inputNombreCompleto');
+        const avatarPreviewBox = container.querySelector('#avatarPreviewBox');
+        if (inputUsername) inputUsername.value = perfil.username || '';
+        if (inputNombreCompleto) inputNombreCompleto.value = perfil.nombre_completo || '';
+        avatarBase64 = perfil.avatar_url || null;
+        if (perfil.avatar_url && avatarPreviewBox) {
+          avatarPreviewBox.innerHTML = `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />`;
+        }
+      }
+
+      if (perfil.avatar_url) {
+        avatarBox.innerHTML = `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />`;
+      } else {
+        const inicial = (perfil.nombre_completo || perfil.username || 'U').charAt(0).toUpperCase();
+        avatarBox.innerText = inicial;
       }
     }
 
-    tabPublicas.addEventListener('click', () => cambiarPestana('publicas'));
-    tabSocial.addEventListener('click', () => cambiarPestana('social'));
-    container.querySelector('#btnVerSeguidores').addEventListener('click', () => cambiarPestana('social'));
-    container.querySelector('#btnVerSiguiendo').addEventListener('click', () => cambiarPestana('social'));
+    cntSeguidores.innerText = seguidores;
+    cntSiguiendo.innerText = siguiendo;
+    cntPublicas.innerText = cPublicas;
 
-    async function cargarPerfil() {
-      const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', perfilId).single();
+    // Actualizar caché de perfil
+    if (!cachePerfilesMemoria[perfilId]) cachePerfilesMemoria[perfilId] = {};
+    cachePerfilesMemoria[perfilId] = {
+      ...cachePerfilesMemoria[perfilId],
+      perfil,
+      seguidores,
+      siguiendo,
+      cPublicas
+    };
+  }
 
-      if (perfil) {
-        lblNombre.innerText = perfil.nombre_completo || 'Usuario de BiteLife';
-        lblUser.innerText = `@${perfil.username || 'usuario'}`;
-        if (lblEmail) lblEmail.innerText = esMiPerfil ? usuarioActual.email : '';
+  function renderizarPublicasHTML(publicas, mapaAutoresOriginales) {
+    const grid = container.querySelector('#gridMisPublicas');
+    if (!publicas || publicas.length === 0) {
+      grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
+      return;
+    }
 
-        if (esMiPerfil) {
-          const inputUsername = container.querySelector('#inputUsername');
-          const inputNombreCompleto = container.querySelector('#inputNombreCompleto');
-          const avatarPreviewBox = container.querySelector('#avatarPreviewBox');
-          if (inputUsername) inputUsername.value = perfil.username || '';
-          if (inputNombreCompleto) inputNombreCompleto.value = perfil.nombre_completo || '';
-          avatarBase64 = perfil.avatar_url || null;
-          if (perfil.avatar_url && avatarPreviewBox) {
-            avatarPreviewBox.innerHTML = `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />`;
+    grid.innerHTML = publicas.map(r => {
+      const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
+      const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
+
+      return `
+        <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
+            
+            ${esCompartida ? `
+              <div class="btn-ver-perfil-creador-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
+                <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
+                <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
+              </div>
+            ` : ''}
+
+            <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
+            <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const autorId = btn.getAttribute('data-autorid');
+        if (autorId) {
+          const appContent = document.querySelector('.main-content');
+          if (appContent) {
+            appContent.innerHTML = '';
+            appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
           }
         }
+      });
+    });
+  }
 
-        if (perfil.avatar_url) {
-          avatarBox.innerHTML = `<img src="${perfil.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" />`;
-        } else {
-          const inicial = (perfil.nombre_completo || perfil.username || 'U').charAt(0).toUpperCase();
-          avatarBox.innerText = inicial;
-        }
-      }
+  async function cargarMisRecetasPublicas() {
+    if (datosCached && datosCached.publicas) {
+      renderizarPublicasHTML(datosCached.publicas, datosCached.mapaAutoresOriginales || {});
+    } else {
+      container.querySelector('#gridMisPublicas').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando...</p>';
+    }
 
-      const { data: seguidoresData } = await supabase
-        .from('seguidores')
-        .select('seguidor_id')
-        .eq('seguido_id', perfilId);
-
-      const { data: siguiendoData } = await supabase
-        .from('seguidores')
-        .select('seguido_id')
-        .eq('seguidor_id', perfilId);
-
-      const { count: cPublicas } = await supabase
+    try {
+      const { data: publicas, error: errPublicas } = await supabase
         .from('recetas')
-        .select('*', { count: 'exact', head: true })
+        .select('*')
         .eq('user_id', perfilId)
-        .eq('es_publica', true);
+        .eq('es_publica', true)
+        .order('created_at', { ascending: false });
 
-      cntSeguidores.innerText = seguidoresData ? seguidoresData.length : 0;
-      cntSiguiendo.innerText = siguiendoData ? siguiendoData.length : 0;
-      cntPublicas.innerText = cPublicas || 0;
-    }
+      if (errPublicas) throw errPublicas;
 
-    async function cargarMisRecetasPublicas() {
-      const grid = container.querySelector('#gridMisPublicas');
-      grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando...</p>';
+      const idsAutoresOriginales = [...new Set((publicas || []).map(r => r.autor_original_id).filter(Boolean))];
+      const mapaAutoresOriginales = {};
 
-      try {
-        const { data: publicas, error: errPublicas } = await supabase
-          .from('recetas')
+      if (idsAutoresOriginales.length > 0) {
+        const { data: perfilesOriginales } = await supabase
+          .from('perfiles')
           .select('*')
-          .eq('user_id', perfilId)
-          .eq('es_publica', true)
-          .order('created_at', { ascending: false });
+          .in('id', idsAutoresOriginales);
 
-        if (errPublicas) throw errPublicas;
-
-        if (!publicas || publicas.length === 0) {
-          grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
-          return;
-        }
-
-        const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
-        const mapaAutoresOriginales = {};
-
-        if (idsAutoresOriginales.length > 0) {
-          const { data: perfilesOriginales } = await supabase
-            .from('perfiles')
-            .select('*')
-            .in('id', idsAutoresOriginales);
-
-          (perfilesOriginales || []).forEach(p => {
-            mapaAutoresOriginales[p.id] = p;
-          });
-        }
-
-        grid.innerHTML = publicas.map(r => {
-          const autorOriginal = r.autor_original_id ? mapaAutoresOriginales[r.autor_original_id] : null;
-          const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
-
-          return `
-            <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
-                
-                ${esCompartida ? `
-                  <div class="btn-ver-perfil-creador-original" data-autorid="${autorOriginal.id}" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);">
-                    <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">Creada por:</span>
-                    <span style="font-size: 11px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${autorOriginal.username || 'usuario'}</span>
-                  </div>
-                ` : ''}
-
-                <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
-                <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const autorId = btn.getAttribute('data-autorid');
-            if (autorId) {
-              const appContent = document.querySelector('.main-content');
-              if (appContent) {
-                appContent.innerHTML = '';
-                appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
-              }
-            }
-          });
+        (perfilesOriginales || []).forEach(p => {
+          mapaAutoresOriginales[p.id] = p;
         });
-      } catch (err) {
-        console.error("Error cargando recetas públicas del perfil:", err);
-        grid.innerHTML = '<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las recetas de este perfil.</p>';
+      }
+
+      if (!cachePerfilesMemoria[perfilId]) cachePerfilesMemoria[perfilId] = {};
+      cachePerfilesMemoria[perfilId].publicas = publicas;
+      cachePerfilesMemoria[perfilId].mapaAutoresOriginales = mapaAutoresOriginales;
+
+      renderizarPublicasHTML(publicas, mapaAutoresOriginales);
+
+    } catch (err) {
+      console.error("Error cargando recetas públicas del perfil:", err);
+      if (!datosCached || !datosCached.publicas) {
+        container.querySelector('#gridMisPublicas').innerHTML = '<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las recetas de este perfil.</p>';
       }
     }
+  }
 
-    async function cargarListasSociales() {
-      const divMeSiguen = container.querySelector('#listaSeguidoresMeSiguen');
-      const divYoSigo = container.querySelector('#listaSeguidoresYoSigo');
+  async function cargarListasSociales() {
+    const divMeSiguen = container.querySelector('#listaSeguidoresMeSiguen');
+    const divYoSigo = container.querySelector('#listaSeguidoresYoSigo');
 
-      divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Cargando...</p>';
-      divYoSigo.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Cargando...</p>';
+    divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Cargando...</p>';
+    divYoSigo.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Cargando...</p>';
 
-      const { data: relacionesSeguidores } = await supabase
-        .from('seguidores')
-        .select('seguidor_id')
-        .eq('seguido_id', perfilId);
+    const [resSeguidores, resSiguiendo] = await Promise.all([
+      supabase.from('seguidores').select('seguidor_id').eq('seguido_id', perfilId),
+      supabase.from('seguidores').select('seguido_id').eq('seguidor_id', perfilId)
+    ]);
 
-      const { data: relacionesSiguiendo } = await supabase
-        .from('seguidores')
-        .select('seguido_id')
-        .eq('seguidor_id', perfilId);
+    const relacionesSeguidores = resSeguidores.data || [];
+    const relacionesSiguiendo = resSiguiendo.data || [];
 
-      if (relacionesSeguidores && relacionesSeguidores.length > 0) {
-        const idsSeguidores = relacionesSeguidores.map(s => s.seguidor_id);
-        const { data: perfilesSeguidores } = await supabase.from('perfiles').select('*').in('id', idsSeguidores);
+    // PERSONAS QUE SIGUEN A ESTE USUARIO
+    if (relacionesSeguidores.length > 0) {
+      const idsSeguidores = relacionesSeguidores.map(s => s.seguidor_id);
+      const { data: perfilesSeguidores } = await supabase.from('perfiles').select('*').in('id', idsSeguidores);
 
-        divMeSiguen.innerHTML = (perfilesSeguidores || []).map(p => `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
-                ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
-              </div>
-              <div style="min-width: 0;">
-                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
-                <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
-              </div>
+      divMeSiguen.innerHTML = (perfilesSeguidores || []).map(p => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
+            <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
+              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
+              <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
             </div>
           </div>
-        `).join('');
+        </div>
+      `).join('');
 
-        divMeSiguen.querySelectorAll('.btn-ver-perfil-item').forEach(el => {
-          el.addEventListener('click', () => {
-            const idTarget = el.getAttribute('data-id');
-            const appContent = document.querySelector('.main-content');
-            if (appContent) {
-              appContent.innerHTML = '';
-              appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
-            }
-          });
+      divMeSiguen.querySelectorAll('.btn-ver-perfil-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const idTarget = el.getAttribute('data-id');
+          const appContent = document.querySelector('.main-content');
+          if (appContent) {
+            appContent.innerHTML = '';
+            appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+          }
         });
-      } else {
-        divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Nadie le sigue aún.</p>';
-      }
-
-      if (relacionesSiguiendo && relacionesSiguiendo.length > 0) {
-        const idsSiguiendo = relacionesSiguiendo.map(s => s.seguido_id);
-        const { data: perfilesSiguiendo } = await supabase.from('perfiles').select('*').in('id', idsSiguiendo);
-
-        divYoSigo.innerHTML = (perfilesSiguiendo || []).map(p => `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
-                ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
-              </div>
-              <div style="min-width: 0;">
-                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
-                <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
-              </div>
-            </div>
-            ${esMiPerfil ? `<button class="btn-unfollow btn-outline" data-id="${p.id}" style="width: auto; padding: 4px 10px; font-size: 11px; margin: 0; color: var(--danger); white-space: nowrap; flex-shrink: 0;">Dejar de seguir</button>` : ''}
-          </div>
-        `).join('');
-
-        divYoSigo.querySelectorAll('.btn-ver-perfil-item').forEach(el => {
-          el.addEventListener('click', () => {
-            const idTarget = el.getAttribute('data-id');
-            const appContent = document.querySelector('.main-content');
-            if (appContent) {
-              appContent.innerHTML = '';
-              appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
-            }
-          });
-        });
-
-        if (esMiPerfil) {
-          divYoSigo.querySelectorAll('.btn-unfollow').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const idBorrar = btn.getAttribute('data-id');
-              await supabase.from('seguidores').delete().eq('seguidor_id', usuarioActual.id).eq('seguido_id', idBorrar);
-              cargarPerfil();
-              cargarListasSociales();
-            });
-          });
-        }
-      } else {
-        divYoSigo.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">No sigue a nadie todavía.</p>';
-      }
+      });
+    } else {
+      divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Nadie le sigue aún.</p>';
     }
 
-    cargarPerfil();
-    cargarMisRecetasPublicas();
-  }, 0);
+    // PERSONAS A LAS QUE SIGUE ESTE USUARIO
+    if (relacionesSiguiendo.length > 0) {
+      const idsSiguiendo = relacionesSiguiendo.map(s => s.seguido_id);
+      const { data: perfilesSiguiendo } = await supabase.from('perfiles').select('*').in('id', idsSiguiendo);
+
+      divYoSigo.innerHTML = (perfilesSiguiendo || []).map(p => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--input-bg); border-radius: 12px; border: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; flex: 1;" class="btn-ver-perfil-item" data-id="${p.id}">
+            <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden; flex-shrink: 0;">
+              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%; height:100%; object-fit:cover;" />` : (p.username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.nombre_completo || p.username}</div>
+              <div style="font-size: 11px; color: var(--primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@${p.username}</div>
+            </div>
+          </div>
+          ${esMiPerfil ? `<button class="btn-unfollow btn-outline" data-id="${p.id}" style="width: auto; padding: 4px 10px; font-size: 11px; margin: 0; color: var(--danger); white-space: nowrap; flex-shrink: 0;">Dejar de seguir</button>` : ''}
+        </div>
+      `).join('');
+
+      divYoSigo.querySelectorAll('.btn-ver-perfil-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const idTarget = el.getAttribute('data-id');
+          const appContent = document.querySelector('.main-content');
+          if (appContent) {
+            appContent.innerHTML = '';
+            appContent.appendChild(renderPerfilView(usuarioActual, idTarget, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+          }
+        });
+      });
+
+      if (esMiPerfil) {
+        divYoSigo.querySelectorAll('.btn-unfollow').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const idBorrar = btn.getAttribute('data-id');
+            await supabase.from('seguidores').delete().eq('seguidor_id', usuarioActual.id).eq('seguido_id', idBorrar);
+            delete cachePerfilesMemoria[perfilId];
+            cargarPerfil();
+            cargarListasSociales();
+          });
+        });
+      }
+    } else {
+      divYoSigo.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">No sigue a nadie todavía.</p>';
+    }
+  }
+
+  cargarPerfil();
+  cargarMisRecetasPublicas();
 
   return container;
 }

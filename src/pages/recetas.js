@@ -1,11 +1,14 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
+// ⚡ VARIABLE EN MEMORIA PARA CONSERVAR EL ESTADO ENTRE CAMBIOS DE PESTAÑA
+let cacheMisRecetasMemoria = null;
+
 export function renderRecetasView(usuarioActual, abrirFormularioInicial = false) {
   const container = document.createElement('div');
   container.className = 'recetas-page-container';
 
-  let recetas = [];
+  let recetas = cacheMisRecetasMemoria ? cacheMisRecetasMemoria.recetas : [];
   let busqueda = '';
   let categoriaFiltro = 'Todos';
   let imagenBase64 = null;
@@ -17,7 +20,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let recetaOriginalId = null;
 
   // MAPA DE PERFILES DE AUTORES ORIGINALES
-  let mapaAutoresOriginales = {};
+  let mapaAutoresOriginales = cacheMisRecetasMemoria ? cacheMisRecetasMemoria.mapaAutoresOriginales : {};
 
   const listaCategorias = [
     'Todos', 
@@ -358,6 +361,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   });
 
   async function cargarRecetas() {
+    if (!cacheMisRecetasMemoria) {
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">Cargando recetas...</p></div>`;
+    }
+
     const { data, error } = await supabase
       .from('recetas')
       .select('*')
@@ -381,6 +388,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         });
       }
 
+      cacheMisRecetasMemoria = { recetas, mapaAutoresOriginales };
       renderGrid(); 
     }
   }
@@ -496,11 +504,9 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
     contenidoDetalle.innerHTML = `
       ${imgHtml}
-      <!-- CABECERA CON TÍTULO Y BOTONES AJUSTADOS PARA MÓVIL -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
         <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary); flex: 1; min-width: 0; line-height: 1.2; word-break: break-word;">${r.nombre}</h2>
         
-        <!-- CONTENEDOR DE BOTONES FIJO Y RESPONSIVO -->
         <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
           <button id="btnExportPDFDetail" class="btn-outline" style="width: auto; padding: 6px 10px; margin: 0; border-radius: 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -600,6 +606,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       btnSubmit.disabled = false;
     }
   });
+
+  if (cacheMisRecetasMemoria) {
+    renderGrid();
+  }
 
   cargarRecetas();
   return container;

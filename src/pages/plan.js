@@ -1,12 +1,14 @@
 import { supabase } from '../supabase.js';
 import { icons } from '../icons.js';
 
+// ⚡ CACHÉ EN MEMORIA PARA MANTENER RECETAS, CATÁLOGO Y PLANES ENTRE CAMBIOS DE PESTAÑA
+let cacheMisRecetasPlan = null;
+let cacheCatalogoPlan = null;
+let cachePlanDiario = {};
+
 export function renderPlanView(usuarioActual) {
   const container = document.createElement('div');
   container.className = 'container';
-
-  let cacheMisRecetas = null;
-  let cacheCatalogo = null;
 
   // FUNCIÓN SEGURA PARA OBTENER YYYY-MM-DD EN HORA LOCAL
   function formatIsoLocal(d) {
@@ -115,32 +117,31 @@ export function renderPlanView(usuarioActual) {
       </div>
     </div>
 
-  <!-- MODAL SELECCIÓN DE RECETA -->
-  <div id="modalSelectReceta" class="sidebar-overlay">
-    <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
-          ${icons.recetas} Mis Recetas
-        </h3>
-        <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
-      </div>
+    <!-- MODAL SELECCIÓN DE RECETA -->
+    <div id="modalSelectReceta" class="sidebar-overlay">
+      <div class="card" style="max-width: 450px; width: 90%; margin: 60px auto; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+            ${icons.recetas} Mis Recetas
+          </h3>
+          <button id="btnCloseModalRecetas" style="width: auto; background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 0; margin: 0;">✕</button>
+        </div>
 
-      <!-- BUSCADOR CON LA LUPA VECTORIAL DE TU SISTEMA -->
-      <div style="position: relative; margin-bottom: 12px; display: flex; align-items: center; width: 100%;">
-        <span style="position: absolute; left: 12px; color: var(--text-muted); display: flex; align-items: center; pointer-events: none;">
-          ${icons.search}
-        </span>
-        <input 
-          type="text" 
-          id="inputBuscarRecetaModal" 
-          placeholder="Buscar receta..." 
-          style="margin: 0; padding-left: 38px; height: 40px; font-size: 13px; width: 100%;" 
-        />
-      </div>
+        <div style="position: relative; margin-bottom: 12px; display: flex; align-items: center; width: 100%;">
+          <span style="position: absolute; left: 12px; color: var(--text-muted); display: flex; align-items: center; pointer-events: none;">
+            ${icons.search}
+          </span>
+          <input 
+            type="text" 
+            id="inputBuscarRecetaModal" 
+            placeholder="Buscar receta..." 
+            style="margin: 0; padding-left: 38px; height: 40px; font-size: 13px; width: 100%;" 
+          />
+        </div>
 
-      <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;"></div>
+        <div id="listadoModalRecetas" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;"></div>
+      </div>
     </div>
-  </div>
 
     <!-- MODAL BUSCADOR DE ALIMENTOS -->
     <div id="modalSearchAlimento" class="sidebar-overlay">
@@ -286,35 +287,9 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
-  async function cargarMenuDia() {
+  // ⚡ DIBUJAR MENÚ DIARIO DESDE MEMORIA LOCAL
+  function renderizarMenuHTML(planData, misRecetas, catalogo) {
     const list = container.querySelector('#listaComidasPlan');
-
-    const promesas = [
-      supabase.from('plan_semanal').select('*').eq('user_id', usuarioActual.id).eq('dia_semana', diaSeleccionadoObj.iso)
-    ];
-
-    if (!cacheMisRecetas) {
-      promesas.push(supabase.from('recetas').select('*').eq('user_id', usuarioActual.id));
-    }
-    if (!cacheCatalogo) {
-      promesas.push(supabase.from('catalogo_alimentos').select('*'));
-    }
-
-    const resultados = await Promise.all(promesas);
-    const planData = resultados[0].data || [];
-
-    let idxPromesa = 1;
-    if (!cacheMisRecetas) {
-      cacheMisRecetas = resultados[idxPromesa]?.data || [];
-      idxPromesa++;
-    }
-    if (!cacheCatalogo) {
-      cacheCatalogo = resultados[idxPromesa]?.data || [];
-    }
-
-    const misRecetas = cacheMisRecetas;
-    const catalogo = cacheCatalogo;
-
     const tiposComida = [
       { id: 'Desayuno', label: 'Desayuno' },
       { id: 'Comida', label: 'Almuerzo / Comida' },
@@ -501,7 +476,7 @@ export function renderPlanView(usuarioActual) {
           }]).select();
 
           if (nuevoCat && nuevoCat.length > 0) {
-            cacheCatalogo.push(nuevoCat[0]);
+            cacheCatalogoPlan.push(nuevoCat[0]);
           }
 
           modal.classList.remove('visible');
@@ -527,6 +502,46 @@ export function renderPlanView(usuarioActual) {
     });
   }
 
+  async function cargarMenuDia() {
+    const isoDia = diaSeleccionadoObj.iso;
+
+    // ⚡ PASO 1: PINTO INMEDIATAMENTE DESDE LA MEMORIA SI EXISTE (0 MS DE RETRASO)
+    if (cachePlanDiario[isoDia] && cacheMisRecetasPlan && cacheCatalogoPlan) {
+      renderizarMenuHTML(cachePlanDiario[isoDia], cacheMisRecetasPlan, cacheCatalogoPlan);
+    } else {
+      container.querySelector('#listaComidasPlan').innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">Cargando menú...</div>`;
+    }
+
+    // ⚡ PASO 2: SINCRONIZACIÓN EN SEGUNDO PLANO CON SUPABASE
+    const promesas = [
+      supabase.from('plan_semanal').select('*').eq('user_id', usuarioActual.id).eq('dia_semana', isoDia)
+    ];
+
+    if (!cacheMisRecetasPlan) {
+      promesas.push(supabase.from('recetas').select('*').eq('user_id', usuarioActual.id));
+    }
+    if (!cacheCatalogoPlan) {
+      promesas.push(supabase.from('catalogo_alimentos').select('*'));
+    }
+
+    const resultados = await Promise.all(promesas);
+    const planData = resultados[0].data || [];
+
+    let idxPromesa = 1;
+    if (!cacheMisRecetasPlan) {
+      cacheMisRecetasPlan = resultados[idxPromesa]?.data || [];
+      idxPromesa++;
+    }
+    if (!cacheCatalogoPlan) {
+      cacheCatalogoPlan = resultados[idxPromesa]?.data || [];
+    }
+
+    // ⚡ GUARDAR EN MEMORIA
+    cachePlanDiario[isoDia] = planData;
+
+    renderizarMenuHTML(planData, cacheMisRecetasPlan, cacheCatalogoPlan);
+  }
+
   function iniciarLimpiezaMenuDiario() {
     pedirConfirmacion(
       "Vaciar Día",
@@ -538,80 +553,77 @@ export function renderPlanView(usuarioActual) {
           .eq('user_id', usuarioActual.id)
           .eq('dia_semana', diaSeleccionadoObj.iso);
 
+        delete cachePlanDiario[diaSeleccionadoObj.iso];
         cargarMenuDia();
       }
     );
   }
 
-  setTimeout(() => {
-    // FILTRADO EN TIEMPO REAL DEL BUSCADOR DE MIS RECETAS EN EL MODAL
-    const inputBuscarReceta = container.querySelector('#inputBuscarRecetaModal');
-    if (inputBuscarReceta) {
-      inputBuscarReceta.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const items = container.querySelectorAll('#listadoModalRecetas .item-receta-modal');
+  const inputBuscarReceta = container.querySelector('#inputBuscarRecetaModal');
+  if (inputBuscarReceta) {
+    inputBuscarReceta.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const items = container.querySelectorAll('#listadoModalRecetas .item-receta-modal');
 
-        items.forEach(item => {
-          const nombre = item.querySelector('.nombre-receta-modal').textContent.toLowerCase();
-          if (nombre.includes(query)) {
-            item.style.setProperty('display', 'flex', 'important');
-          } else {
-            item.style.setProperty('display', 'none', 'important');
-          }
-        });
+      items.forEach(item => {
+        const nombre = item.querySelector('.nombre-receta-modal').textContent.toLowerCase();
+        if (nombre.includes(query)) {
+          item.style.setProperty('display', 'flex', 'important');
+        } else {
+          item.style.setProperty('display', 'none', 'important');
+        }
       });
-    }
-
-    container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenuDiario);
-
-    container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => container.querySelector('#modalSelectReceta').classList.remove('visible'));
-    container.querySelector('#btnCloseModalSearch').addEventListener('click', () => container.querySelector('#modalSearchAlimento').classList.remove('visible'));
-    
-    container.querySelector('#modalSelectReceta').addEventListener('click', (e) => { if (e.target.id === 'modalSelectReceta') container.querySelector('#modalSelectReceta').classList.remove('visible'); });
-    container.querySelector('#modalSearchAlimento').addEventListener('click', (e) => { if (e.target.id === 'modalSearchAlimento') container.querySelector('#modalSearchAlimento').classList.remove('visible'); });
-    container.querySelector('#modalConfirmacion').addEventListener('click', (e) => { if (e.target.id === 'modalConfirmacion') container.querySelector('#modalConfirmacion').classList.remove('visible'); });
-
-    container.querySelector('#btnMiniPrev').addEventListener('click', () => { miniCalFecha.setMonth(miniCalFecha.getMonth() - 1); renderMiniCal(); });
-    container.querySelector('#btnMiniNext').addEventListener('click', () => { miniCalFecha.setMonth(miniCalFecha.getMonth() + 1); renderMiniCal(); });
-
-    container.querySelector('#btnSemanaAnterior').addEventListener('click', () => {
-      lunesSemana.setDate(lunesSemana.getDate() - 7);
-      diasCalculados = generarDiasSemana(lunesSemana);
-      diaSeleccionadoObj = diasCalculados[0];
-      miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
-      actualizarEncabezado();
-      renderPills();
-      renderMiniCal();
-      cargarMenuDia();
     });
+  }
 
-    container.querySelector('#btnSemanaSiguiente').addEventListener('click', () => {
-      lunesSemana.setDate(lunesSemana.getDate() + 7);
-      diasCalculados = generarDiasSemana(lunesSemana);
-      diaSeleccionadoObj.iso;
-      diaSeleccionadoObj = diasCalculados[0];
-      miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
-      actualizarEncabezado();
-      renderPills();
-      renderMiniCal();
-      cargarMenuDia();
-    });
+  container.querySelector('#btnLimpiarPlan').addEventListener('click', iniciarLimpiezaMenuDiario);
 
-    container.querySelector('#btnHoy').addEventListener('click', () => {
-      lunesSemana = getLunesActual(new Date());
-      diasCalculados = generarDiasSemana(lunesSemana);
-      diaSeleccionadoObj = diasCalculados.find(d => d.esHoy) || diasCalculados[0];
-      miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
-      actualizarEncabezado();
-      renderPills();
-      renderMiniCal();
-      cargarMenuDia();
-    });
+  container.querySelector('#btnCloseModalRecetas').addEventListener('click', () => container.querySelector('#modalSelectReceta').classList.remove('visible'));
+  container.querySelector('#btnCloseModalSearch').addEventListener('click', () => container.querySelector('#modalSearchAlimento').classList.remove('visible'));
+  
+  container.querySelector('#modalSelectReceta').addEventListener('click', (e) => { if (e.target.id === 'modalSelectReceta') container.querySelector('#modalSelectReceta').classList.remove('visible'); });
+  container.querySelector('#modalSearchAlimento').addEventListener('click', (e) => { if (e.target.id === 'modalSearchAlimento') container.querySelector('#modalSearchAlimento').classList.remove('visible'); });
+  container.querySelector('#modalConfirmacion').addEventListener('click', (e) => { if (e.target.id === 'modalConfirmacion') container.querySelector('#modalConfirmacion').classList.remove('visible'); });
 
+  container.querySelector('#btnMiniPrev').addEventListener('click', () => { miniCalFecha.setMonth(miniCalFecha.getMonth() - 1); renderMiniCal(); });
+  container.querySelector('#btnMiniNext').addEventListener('click', () => { miniCalFecha.setMonth(miniCalFecha.getMonth() + 1); renderMiniCal(); });
+
+  container.querySelector('#btnSemanaAnterior').addEventListener('click', () => {
+    lunesSemana.setDate(lunesSemana.getDate() - 7);
+    diasCalculados = generarDiasSemana(lunesSemana);
+    diaSeleccionadoObj = diasCalculados[0];
+    miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
+    actualizarEncabezado();
     renderPills();
     renderMiniCal();
     cargarMenuDia();
-  }, 0);
+  });
+
+  container.querySelector('#btnSemanaSiguiente').addEventListener('click', () => {
+    lunesSemana.setDate(lunesSemana.getDate() + 7);
+    diasCalculados = generarDiasSemana(lunesSemana);
+    diaSeleccionadoObj = diasCalculados[0];
+    miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
+    actualizarEncabezado();
+    renderPills();
+    renderMiniCal();
+    cargarMenuDia();
+  });
+
+  container.querySelector('#btnHoy').addEventListener('click', () => {
+    lunesSemana = getLunesActual(new Date());
+    diasCalculados = generarDiasSemana(lunesSemana);
+    diaSeleccionadoObj = diasCalculados.find(d => d.esHoy) || diasCalculados[0];
+    miniCalFecha = new Date(diaSeleccionadoObj.fechaObj);
+    actualizarEncabezado();
+    renderPills();
+    renderMiniCal();
+    cargarMenuDia();
+  });
+
+  renderPills();
+  renderMiniCal();
+  cargarMenuDia();
 
   return container;
 }
