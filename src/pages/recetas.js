@@ -195,7 +195,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   if (abrirFormularioInicial) modalForm.classList.remove('hidden');
 
-  // MANEJO DE CHIPS DE CATEGORÍA DESLICABLES
   container.querySelectorAll('.filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -368,7 +367,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     if (!error && data) { 
       recetas = data;
 
-      // OBTENER INFORMACIÓN DE PERFILES DE AUTORES ORIGINALES
       const idsAutoresOriginales = [...new Set(recetas.map(r => r.autor_original_id).filter(Boolean))];
       
       mapaAutoresOriginales = {};
@@ -417,7 +415,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         ? `<span style="font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">${icons.globe} Pública</span>`
         : `<span style="font-size: 10px; font-weight: 800; color: var(--text-muted); background: var(--input-bg); padding: 2px 6px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">${icons.lock} Privada</span>`;
 
-      // ETIQUETA DE CREADOR ORIGINAL
       const etiquetaAutorOriginal = esCompartida ? `
         <div style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--primary-light); border-radius: 8px; margin-top: 6px; margin-bottom: 6px; width: fit-content;">
           <span style="font-size: 10px; color: var(--text-muted);">Creada por:</span>
@@ -460,14 +457,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     resetFormulario();
     recetaEditandoId = r.id;
     
-    // RETENER INFORMACIÓN DE AUTORÍA ORIGINAL AL ABRIR LA EDICIÓN
     autorOriginalId = r.autor_original_id || null;
     recetaOriginalId = r.receta_original_id || null;
 
     formTitle.innerText = "Editar Receta";
     btnSubmit.innerText = "Actualizar Receta";
 
-    // Limpia cualquier marca anterior tipo (de @usuario) en el campo del nombre
     const nombreLimpio = (r.nombre || '').replace(/\s*\(de @[^)]+\)/gi, '');
     container.querySelector('#recetaNombre').value = nombreLimpio;
     
@@ -501,18 +496,25 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
     contenidoDetalle.innerHTML = `
       ${imgHtml}
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
-        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
-        <div style="display: flex; gap: 6px;">
-          <button id="btnExportPDFDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> Exportar PDF
+      <!-- CABECERA CON TÍTULO Y BOTONES AJUSTADOS PARA MÓVIL -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary); flex: 1; min-width: 0; line-height: 1.2; word-break: break-word;">${r.nombre}</h2>
+        
+        <!-- CONTENEDOR DE BOTONES FIJO Y RESPONSIVO -->
+        <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
+          <button id="btnExportPDFDetail" class="btn-outline" style="width: auto; padding: 6px 10px; margin: 0; border-radius: 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <span>PDF</span>
+          </button>          
+          <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 6px 10px; margin: 0; border-radius: 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
+            ${icons.edit}
+            <span>Editar</span>
           </button>
-          <button id="btnEditFromDetail" class="btn-outline" style="width: auto; padding: 4px 10px; margin: 0; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${icons.edit} Editar</button>
         </div>
       </div>
 
       ${esCompartida ? `
-        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 10px; width: fit-content;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--primary-light); border-radius: 8px; margin-bottom: 10px; width: fit-content; border: 1px solid var(--border);">
           <span style="font-size: 11px; color: var(--text-muted);">Creada por:</span>
           <span style="font-size: 12px; font-weight: 800; color: var(--primary);">@${autorOriginal.username || 'usuario'}</span>
         </div>
@@ -576,7 +578,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         categorias: categoriasStr,
         es_publica,
         
-        // INCLUIR SIEMPRE LOS CAMPOS DE AUTORÍA ORIGINAL
         autor_original_id: autorOriginalId,
         receta_original_id: recetaOriginalId
       };
