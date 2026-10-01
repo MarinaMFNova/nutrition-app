@@ -9,6 +9,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   container.className = 'container';
 
   let categoriaFiltro = 'Todos';
+  let paginaActual = 1;
+  const recetasPorPagina = 12;
+  let totalPaginas = 1;
+
   const listaCategorias = [
     'Todos', 
     'Desayuno', 
@@ -67,6 +71,13 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       <div id="gridFeed" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; width: 100%;">
         Cargando publicaciones...
       </div>
+
+      <!-- CONTROLES DE PAGINACIÓN -->
+      <div id="contenedorPaginacionFeed" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px;">
+        <button id="btnPaginaAnteriorFeed" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px;" disabled>◀ Anterior</button>
+        <span id="lblPaginaInfoFeed" style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Página 1 de 1</span>
+        <button id="btnPaginaSiguienteFeed" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px;" disabled>Siguiente ▶</button>
+      </div>
     </div>
 
     <!-- MODAL DETALLE DE RECETA DEL FEED -->
@@ -98,6 +109,10 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   const secUsuarios = container.querySelector('#secUsuariosEncontrados');
   const gridUsuarios = container.querySelector('#gridUsuariosEncontrados');
 
+  const btnPagAnt = container.querySelector('#btnPaginaAnteriorFeed');
+  const btnPagSig = container.querySelector('#btnPaginaSiguienteFeed');
+  const lblPagInfo = container.querySelector('#lblPaginaInfoFeed');
+
   const modalDetalle = container.querySelector('#modalDetalleFeed');
   const contenidoDetalle = container.querySelector('#contenidoDetalleFeed');
   const btnCloseDetalle = container.querySelector('#btnCloseDetalleFeed');
@@ -111,6 +126,23 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   btnCerrarModal.addEventListener('click', () => modalNotif.classList.remove('visible'));
   btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
+
+  // EVENTOS PAGINACIÓN
+  btnPagAnt.addEventListener('click', () => {
+    if (paginaActual > 1) {
+      paginaActual--;
+      cargarComunidad(inputBuscar.value, true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  btnPagSig.addEventListener('click', () => {
+    if (paginaActual < totalPaginas) {
+      paginaActual++;
+      cargarComunidad(inputBuscar.value, true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
 
   // NAVEGAR AL PERFIL
   function irAlPerfilCocinero(userId) {
@@ -128,6 +160,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       chip.classList.add('active');
 
       categoriaFiltro = chip.getAttribute('data-cat');
+      paginaActual = 1;
       cargarComunidad(inputBuscar.value, true);
     });
   });
@@ -212,7 +245,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
   function renderizarListaFeed(recetasFiltradas, mapaPerfiles, misRecetasGuardadas = []) {
     const svgRepeat = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
 
-    // SET CON LOS IDS DE RECETAS P PADRES GUARDADAS
     const idsGuardados = new Set();
     misRecetasGuardadas.forEach(myR => {
       if (myR.receta_original_id) idsGuardados.add(myR.receta_original_id);
@@ -224,7 +256,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const autorOriginal = r.autor_original_id ? mapaPerfiles[r.autor_original_id] : null;
       const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
 
-      // COMPROBAMOS SI EL USUARIO ACTUAL YA TIENE GUARDADA ESTA RECETA
       const idReferenciaOriginal = r.receta_original_id || r.id;
       const yaGuardada = idsGuardados.has(r.id) || idsGuardados.has(idReferenciaOriginal);
 
@@ -232,7 +263,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         ? r.ingredientes.split('\n').filter(i => i.trim()).slice(0, 3).join(', ') 
         : 'Sin ingredientes especificados';
 
-      // BOTÓN DE ACCIÓN SEGÚN EL ESTADO DE GUARDADO
       const btnGuardarHtml = yaGuardada ? `
         <button disabled class="btn-outline" style="width: 100%; padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 10px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--input-bg); color: var(--primary); border: 1px solid var(--primary-light); cursor: default; opacity: 0.9;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -380,8 +410,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           }
 
           mostrarAvisoModal('¡Receta Guardada!', `"${nombreLimpio}" de ${tagCreador} se ha añadido a tus recetas.`);
-          
-          // RECARGAR COMUNIDAD PARA ACTUALIZAR EL BOTÓN A "GUARDADA"
           cargarComunidad(inputBuscar.value, true);
 
           if (onRecetaImportada) onRecetaImportada();
@@ -400,28 +428,23 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const termino = busqueda.toLowerCase().trim().replace('@', '');
     const hayBusqueda = termino.length > 0;
 
-    // RENDERIZADO DESDE MEMORIA
+    // RENDERIZADO DESDE MEMORIA SI NO HAY BÚSQUEDA NI FILTROS
     if (cacheComunidadMemoria && !hayBusqueda && categoriaFiltro === 'Todos' && !forzarRecarga) {
       renderizarListaFeed(cacheComunidadMemoria.recetasFiltradas, cacheComunidadMemoria.mapaPerfiles, cacheComunidadMemoria.misRecetasGuardadas);
+      lblPagInfo.innerText = `Página ${paginaActual} de ${cacheComunidadMemoria.totalPaginas || 1}`;
+      btnPagAnt.disabled = paginaActual <= 1;
+      btnPagSig.disabled = paginaActual >= (cacheComunidadMemoria.totalPaginas || 1);
     } else if (!cacheComunidadMemoria || hayBusqueda || categoriaFiltro !== 'Todos') {
       gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando publicaciones...</p>';
     }
 
     try {
-      // ⚡ CONSULTA PARALELA: SEGUIDOS, RECETAS PÚBLICAS Y MIS PROPIAS RECETAS PARA VERIFICAR GUARDADAS
-      const [resRelaciones, resRecetas, resMisRecetas] = await Promise.all([
+      // OBTENER SEGUIDOS Y MIS RECETAS PARALELAMENTE
+      const [resRelaciones, resMisRecetas] = await Promise.all([
         supabase.from('seguidores').select('seguido_id, estado').eq('seguidor_id', usuarioActual.id),
-        supabase.from('recetas')
-          .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url')
-          .eq('es_publica', true)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase.from('recetas')
-          .select('id, receta_original_id')
-          .eq('user_id', usuarioActual.id)
+        supabase.from('recetas').select('id, receta_original_id').eq('user_id', usuarioActual.id)
       ]);
 
-      if (resRecetas.error) throw resRecetas.error;
       if (resRelaciones.error) throw resRelaciones.error;
 
       const mapaRelaciones = {};
@@ -432,7 +455,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const idsAceptados = Object.keys(mapaRelaciones).filter(id => mapaRelaciones[id] === 'aceptado');
       const misRecetasGuardadas = resMisRecetas.data || [];
 
-      // BUSCADOR
+      // BUSCADOR DE USUARIOS
       if (hayBusqueda) {
         const { data: perfilesEncontrados } = await supabase
           .from('perfiles')
@@ -476,20 +499,55 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
-      // FILTRAR RECETAS DE SEGUIDOS
-      const recetasComunidad = (resRecetas.data || []).filter(r => idsAceptados.includes(r.user_id));
-
-      if (recetasComunidad.length === 0) {
+      if (idsAceptados.length === 0) {
         gridFeed.innerHTML = `
           <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
-            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no tienes publicaciones</p>
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no sigues a ningún cocinero</p>
             <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
           </div>
         `;
+        lblPagInfo.innerText = "Página 1 de 1";
+        btnPagAnt.disabled = true;
+        btnPagSig.disabled = true;
         return;
       }
 
-      // PERFILES
+      // CALCULAMOS EL RANGO PARA PAGINACIÓN DE 12 ELEMENTOS
+      const desde = (paginaActual - 1) * recetasPorPagina;
+      const hasta = desde + recetasPorPagina - 1;
+
+      let query = supabase
+        .from('recetas')
+        .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url', { count: 'exact' })
+        .eq('es_publica', true)
+        .in('user_id', idsAceptados)
+        .order('created_at', { ascending: false });
+
+      if (hayBusqueda) {
+        query = query.or(`nombre.ilike.%${termino}%,ingredientes.ilike.%${termino}%`);
+      }
+
+      if (categoriaFiltro !== 'Todos') {
+        query = query.ilike('categorias', `%${categoriaFiltro}%`);
+      }
+
+      const resRecetas = await query.range(desde, hasta);
+      if (resRecetas.error) throw resRecetas.error;
+
+      const recetasComunidad = resRecetas.data || [];
+      const totalRegistros = resRecetas.count || 0;
+      totalPaginas = Math.ceil(totalRegistros / recetasPorPagina) || 1;
+
+      // ACTUALIZAR LEYENDA Y BOTONES
+      lblPagInfo.innerText = `Página ${paginaActual} de ${totalPaginas}`;
+      btnPagAnt.disabled = paginaActual <= 1;
+      btnPagSig.disabled = paginaActual >= totalPaginas;
+
+      if (recetasComunidad.length === 0) {
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas en esta página.</p>';
+        return;
+      }
+
       const idsPerfiles = [...new Set(recetasComunidad.flatMap(r => [r.user_id, r.autor_original_id].filter(Boolean)))];
       const { data: perfiles } = await supabase
         .from('perfiles')
@@ -499,32 +557,20 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const mapaPerfiles = {};
       (perfiles || []).forEach(p => { mapaPerfiles[p.id] = p; });
 
-      let recetasFiltradas = recetasComunidad.filter(r => {
-        const matchTexto = !hayBusqueda || (r.nombre && r.nombre.toLowerCase().includes(termino)) || (r.ingredientes && r.ingredientes.toLowerCase().includes(termino));
-        const matchCat = categoriaFiltro === 'Todos' || (r.categorias && r.categorias.toLowerCase().includes(categoriaFiltro.toLowerCase()));
-        return matchTexto && matchCat;
-      });
-
-      if (recetasFiltradas.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas coincidentes en esta categoría.</p>';
-        return;
-      }
-
       if (!hayBusqueda && categoriaFiltro === 'Todos') {
-        cacheComunidadMemoria = { recetasFiltradas, mapaPerfiles, misRecetasGuardadas };
+        cacheComunidadMemoria = { recetasFiltradas: recetasComunidad, mapaPerfiles, misRecetasGuardadas, totalPaginas };
       }
 
-      renderizarListaFeed(recetasFiltradas, mapaPerfiles, misRecetasGuardadas);
+      renderizarListaFeed(recetasComunidad, mapaPerfiles, misRecetasGuardadas);
 
     } catch (err) {
       console.error("Error al cargar la comunidad:", err);
-      if (!cacheComunidadMemoria) {
-        gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las publicaciones: ${err.message || 'Comprueba tu conexión'}</p>`;
-      }
+      gridFeed.innerHTML = `<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las publicaciones: ${err.message || 'Comprueba tu conexión'}</p>`;
     }
   }
 
   inputBuscar.addEventListener('input', (e) => {
+    paginaActual = 1;
     cargarComunidad(e.target.value);
   });
 

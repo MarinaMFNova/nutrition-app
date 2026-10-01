@@ -15,6 +15,11 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let recetaEditandoId = null;
   let recetaABorrarId = null;
   
+  // VARIABLES DE PAGINACIÓN (12 RECETAS POR PÁGINA)
+  let paginaActual = 1;
+  const recetasPorPagina = 12;
+  let totalPaginas = 1;
+
   // VARIABLES PARA CONSERVAR LA AUTORÍA ORIGINAL AL EDITAR
   let autorOriginalId = null;
   let recetaOriginalId = null;
@@ -145,6 +150,13 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
     <!-- TARJETAS COMPACTAS -->
     <div id="gridRecetas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;"></div>
 
+    <!-- CONTROLES DE PAGINACIÓN DE 12 RECETAS -->
+    <div id="contenedorPaginacion" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px;">
+      <button id="btnPaginaAnterior" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px;" disabled>◀ Anterior</button>
+      <span id="lblPaginaInfo" style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Página 1 de 1</span>
+      <button id="btnPaginaSiguiente" class="btn-outline" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; font-weight: 700; border-radius: 8px;" disabled>Siguiente ▶</button>
+    </div>
+
     <!-- MODAL DETALLE DE RECETA -->
     <div id="modalDetalleReceta" class="sidebar-overlay">
       <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
@@ -181,6 +193,10 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   const inputBuscar = container.querySelector('#inputBuscar');
   const grid = container.querySelector('#gridRecetas');
 
+  const btnPagAnt = container.querySelector('#btnPaginaAnterior');
+  const btnPagSig = container.querySelector('#btnPaginaSiguiente');
+  const lblPagInfo = container.querySelector('#lblPaginaInfo');
+
   const inputFile = container.querySelector('#recetaFile');
   const inputUrl = container.querySelector('#recetaImagenUrl');
   const previewContainer = container.querySelector('#previewContainer');
@@ -204,7 +220,8 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       chip.classList.add('active');
 
       categoriaFiltro = chip.getAttribute('data-cat');
-      renderGrid();
+      paginaActual = 1;
+      cargarRecetas();
     });
   });
 
@@ -229,6 +246,22 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       imgPreview.src = e.target.value.trim();
       previewContainer.classList.remove('hidden');
     } else if (!imagenBase64) previewContainer.classList.add('hidden');
+  });
+
+  btnPagAnt.addEventListener('click', () => {
+    if (paginaActual > 1) {
+      paginaActual--;
+      cargarRecetas();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  btnPagSig.addEventListener('click', () => {
+    if (paginaActual < totalPaginas) {
+      paginaActual++;
+      cargarRecetas();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   });
 
   function resetFormulario() {
@@ -258,25 +291,18 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         <style>
           @page { size: A4; margin: 12mm; }
           body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 0; margin: 0; color: #1e293b; font-size: 11px; }
-          
           .header { border-bottom: 2px solid #2ba8a8; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
           .logo { font-size: 18px; font-weight: 800; color: #2ba8a8; display: flex; align-items: center; gap: 6px; }
-          
           .top-grid { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
           .info-principal { flex: 1; }
           .receta-title { font-size: 18px; font-weight: 800; color: #2ba8a8; margin: 0 0 6px 0; line-height: 1.2; }
           .meta { font-size: 11px; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 6px; }
-          
           .imagen-derecha { width: 200px; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; flex-shrink: 0; }
-
           .seccion { margin-bottom: 12px; }
           .seccion-titulo { font-size: 12px; font-weight: 800; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
           .seccion-titulo svg { width: 14px; height: 14px; color: #1e293b; }
           .texto-bloque { font-size: 11px; line-height: 1.35; color: #1e293b; white-space: pre-line; }
-          
-          @media print {
-            body { padding: 0; }
-          }
+          @media print { body { padding: 0; } }
         </style>
       </head>
       <body>
@@ -330,7 +356,12 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   btnCancelar.addEventListener('click', () => { modalForm.classList.add('hidden'); resetFormulario(); });
   modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
   btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
-  inputBuscar.addEventListener('input', (e) => { busqueda = e.target.value.toLowerCase(); renderGrid(); });
+  
+  inputBuscar.addEventListener('input', (e) => { 
+    busqueda = e.target.value.toLowerCase().trim(); 
+    paginaActual = 1;
+    cargarRecetas(); 
+  });
 
   btnCancelarBorrar.addEventListener('click', () => {
     modalBorrar.classList.remove('visible');
@@ -352,6 +383,7 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
     await supabase.from('recetas').delete().eq('id', recetaABorrarId);
 
+    cacheMisRecetasMemoria = null;
     modalBorrar.classList.remove('visible');
     btnConfirmarBorrar.disabled = false;
     btnConfirmarBorrar.innerText = 'Sí, eliminar';
@@ -361,18 +393,37 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   });
 
   async function cargarRecetas() {
-    if (!cacheMisRecetasMemoria) {
-      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">Cargando recetas...</p></div>`;
-    }
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">Cargando recetas...</p></div>`;
 
-    const { data, error } = await supabase
+    const desde = (paginaActual - 1) * recetasPorPagina;
+    const hasta = desde + recetasPorPagina - 1;
+
+    let query = supabase
       .from('recetas')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', usuarioActual.id)
       .order('created_at', { ascending: false });
 
+    if (busqueda.length > 0) {
+      query = query.or(`nombre.ilike.%${busqueda}%,ingredientes.ilike.%${busqueda}%`);
+    }
+
+    if (categoriaFiltro !== 'Todos') {
+      query = query.ilike('categorias', `%${categoriaFiltro}%`);
+    }
+
+    const { data, count, error } = await query.range(desde, hasta);
+
     if (!error && data) { 
       recetas = data;
+
+      const totalRegistros = count || 0;
+      totalPaginas = Math.ceil(totalRegistros / recetasPorPagina) || 1;
+
+      // ACTUALIZAR CONTROLES PAGINACIÓN
+      lblPagInfo.innerText = `Página ${paginaActual} de ${totalPaginas}`;
+      btnPagAnt.disabled = paginaActual <= 1;
+      btnPagSig.disabled = paginaActual >= totalPaginas;
 
       const idsAutoresOriginales = [...new Set(recetas.map(r => r.autor_original_id).filter(Boolean))];
       
@@ -388,26 +439,21 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         });
       }
 
-      cacheMisRecetasMemoria = { recetas, mapaAutoresOriginales };
       renderGrid(); 
+    } else {
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas.</p></div>`;
     }
   }
 
   function renderGrid() {
-    const filtradas = recetas.filter(r => {
-      const matchBusqueda = r.nombre.toLowerCase().includes(busqueda) || (r.ingredientes && r.ingredientes.toLowerCase().includes(busqueda));
-      const matchCategoria = categoriaFiltro === 'Todos' || (r.categorias && r.categorias.toLowerCase().includes(categoriaFiltro.toLowerCase()));
-      return matchBusqueda && matchCategoria;
-    });
-
     grid.innerHTML = '';
 
-    if (filtradas.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas en esta categoría.</p></div>`;
+    if (recetas.length === 0) {
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="margin: 0; font-size: 14px; font-weight: 600;">No se encontraron recetas en esta página.</p></div>`;
       return;
     }
 
-    filtradas.forEach(r => {
+    recetas.forEach(r => {
       const card = document.createElement('div');
       card.className = 'card';
       card.style.cssText = 'padding: 12px; border-radius: 14px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s;';
@@ -464,7 +510,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   function abrirEdicionReceta(r) {
     resetFormulario();
     recetaEditandoId = r.id;
-    
     autorOriginalId = r.autor_original_id || null;
     recetaOriginalId = r.receta_original_id || null;
 
@@ -473,7 +518,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
     const nombreLimpio = (r.nombre || '').replace(/\s*\(de @[^)]+\)/gi, '');
     container.querySelector('#recetaNombre').value = nombreLimpio;
-    
     container.querySelector('#recetaTiempo').value = r.tiempo_preparacion || 15;
     container.querySelector('#recetaIngredientes').value = r.ingredientes || '';
     container.querySelector('#recetaPasos').value = r.pasos || '';
@@ -497,16 +541,13 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
 
   function abrirDetalleReceta(r, autorOriginal = null) {
     const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
-
     const estadoTexto = r.es_publica ? `${icons.globe} Receta pública (visible para la comunidad)` : `${icons.lock} Receta privada`;
-    
     const esCompartida = !!autorOriginal && autorOriginal.id !== usuarioActual.id;
 
     contenidoDetalle.innerHTML = `
       ${imgHtml}
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
         <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--primary); flex: 1; min-width: 0; line-height: 1.2; word-break: break-word;">${r.nombre}</h2>
-        
         <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
           <button id="btnExportPDFDetail" class="btn-outline" style="width: auto; padding: 6px 10px; margin: 0; border-radius: 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -565,10 +606,36 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
       const nombre = container.querySelector('#recetaNombre').value.trim();
       const tiempo = parseInt(container.querySelector('#recetaTiempo').value) || 15;
       const urlEscrita = inputUrl.value.trim();
-      const finalImagenUrl = imagenBase64 || urlEscrita || null;
       const ingredientes = container.querySelector('#recetaIngredientes').value.trim();
       const pasos = container.querySelector('#recetaPasos').value.trim();
       const es_publica = chkEsPublica.checked;
+
+      // SUBIDA AL BUCKET 'recetas-fotos'
+      let finalImagenUrl = urlEscrita || null;
+      const fileInput = container.querySelector('#recetaFile');
+      const file = fileInput.files[0];
+
+      if (file) {
+        btnSubmit.innerText = "Subiendo imagen...";
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${usuarioActual.id}/${Date.now()}.${fileExt}`;
+
+        const { data: storageData, error: uploadErr } = await supabase.storage
+          .from('recetas-fotos')
+          .upload(filePath, file);
+
+        if (uploadErr) throw new Error("Error al subir la imagen: " + uploadErr.message);
+
+        const { data: urlData } = supabase.storage
+          .from('recetas-fotos')
+          .getPublicUrl(filePath);
+
+        finalImagenUrl = urlData.publicUrl;
+      } else if (imagenBase64 && !urlEscrita) {
+        finalImagenUrl = imagenBase64;
+      }
+
+      btnSubmit.innerText = "Guardando receta...";
 
       const seleccionadas = [];
       container.querySelectorAll('.chk-cat:checked').forEach(c => seleccionadas.push(c.value));
@@ -583,7 +650,6 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         pasos,
         categorias: categoriasStr,
         es_publica,
-        
         autor_original_id: autorOriginalId,
         receta_original_id: recetaOriginalId
       };
@@ -596,20 +662,19 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
         if (error) throw error;
       }
 
+      cacheMisRecetasMemoria = null;
       resetFormulario();
       modalForm.classList.add('hidden');
+      paginaActual = 1;
       cargarRecetas();
     } catch (err) {
       formErrorMsg.innerText = "Error: " + err.message;
       formErrorMsg.style.display = 'block';
     } finally {
       btnSubmit.disabled = false;
+      btnSubmit.innerText = "Guardar Receta";
     }
   });
-
-  if (cacheMisRecetasMemoria) {
-    renderGrid();
-  }
 
   cargarRecetas();
   return container;
