@@ -549,20 +549,31 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
+      // ⚡ RESTRICCIÓN OBLIGATORIA: SI NO SIGUES A NADIE, NO MUESTRA NINGUNA RECETA
+      if (idsAceptados.length === 0) {
+        gridFeed.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no sigues a ningún cocinero</p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
+          </div>
+        `;
+        lblPagInfo.innerText = "Página 1 de 1";
+        btnPagAnt.disabled = true;
+        btnPagSig.disabled = true;
+        return;
+      }
+
       // CALCULAMOS EL RANGO PARA PAGINACIÓN DE 12 ELEMENTOS
       const desde = (paginaActual - 1) * recetasPorPagina;
       const hasta = desde + recetasPorPagina - 1;
 
-      // ⚡ SI SIGUE A ALGUIEN, BUSCA RECETAS DE SUS SEGUIDOS; SI NO SIGUE A NADIE, MUESTRA TODAS LAS RECETAS PÚBLICAS
+      // ⚡ CONSULTA SOLAMENTE DE TUS COCINEROS SEGUIDOS Y ACEPTADOS
       let query = supabase
         .from('recetas')
         .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url', { count: 'exact' })
         .eq('es_publica', true)
+        .in('user_id', idsAceptados)
         .order('created_at', { ascending: false });
-
-      if (idsAceptados.length > 0) {
-        query = query.in('user_id', idsAceptados);
-      }
 
       if (hayBusqueda) {
         query = query.or(`nombre.ilike.%${termino}%,ingredientes.ilike.%${termino}%`);
@@ -579,18 +590,13 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       const totalRegistros = resRecetas.count || 0;
       totalPaginas = Math.ceil(totalRegistros / recetasPorPagina) || 1;
 
-      // ACTUALIZAR LEYENDA Y BOTONES
+      // ACTUALIZAR LEYENDA Y BOTONES DE PAGINACIÓN
       lblPagInfo.innerText = `Página ${paginaActual} de ${totalPaginas}`;
       btnPagAnt.disabled = paginaActual <= 1;
       btnPagSig.disabled = paginaActual >= totalPaginas;
 
       if (recetasComunidad.length === 0) {
-        gridFeed.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
-            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">No hay recetas disponibles</p>
-            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username para enviarles una solicitud de seguimiento.</p>
-          </div>
-        `;
+        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas en esta página.</p>';
         return;
       }
 
