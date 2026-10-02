@@ -14,6 +14,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
 
   let avatarBase64 = null;
   let mostrandoCambioPass = false;
+  let estadoSeguimiento = 'ninguno'; // 'aceptado', 'pendiente', 'ninguno'
 
   const datosCached = cachePerfilesMemoria[perfilId];
 
@@ -134,6 +135,14 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       </div>
     </div>
 
+    <!-- MODAL DETALLE DE RECETA DEL PERFIL -->
+    <div id="modalDetallePerfilReceta" class="sidebar-overlay">
+      <div class="card modal-dialog-content" style="max-width: 480px; width: 92%; margin: 40px auto; max-height: 85vh; overflow-y: auto; padding: 20px; position: relative; border-radius: 20px;">
+        <button id="btnCloseDetallePerfilReceta" style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; font-size: 14px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; z-index: 10;">✕</button>
+        <div id="contenidoDetallePerfilReceta"></div>
+      </div>
+    </div>
+
     <!-- MODAL EDITAR PERFIL (SÓLO SI ES MI PERFIL) -->
     ${esMiPerfil ? `
     <div id="modalEditarPerfil" class="sidebar-overlay">
@@ -246,6 +255,13 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
   const tabPublicas = container.querySelector('#tabBtnMisPublicas');
   const tabSocial = container.querySelector('#tabBtnListaSeguidores');
 
+  const modalDetalle = container.querySelector('#modalDetallePerfilReceta');
+  const contenidoDetalle = container.querySelector('#contenidoDetallePerfilReceta');
+  const btnCloseDetalle = container.querySelector('#btnCloseDetallePerfilReceta');
+
+  btnCloseDetalle.addEventListener('click', () => modalDetalle.classList.remove('visible'));
+  modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) modalDetalle.classList.remove('visible'); });
+
   const btnVolver = container.querySelector('#btnVolverAtras');
   if (btnVolver) {
     btnVolver.addEventListener('click', () => {
@@ -276,34 +292,67 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       .maybeSingle();
 
     if (data) {
-      btnSeguir.innerText = 'Siguiendo';
-      btnSeguir.className = 'btn-outline';
-      btnSeguir.style.color = 'var(--text-muted)';
+      estadoSeguimiento = data.estado || 'aceptado';
+      if (estadoSeguimiento === 'aceptado') {
+        btnSeguir.innerText = 'Siguiendo';
+        btnSeguir.className = 'btn-outline';
+        btnSeguir.style.color = 'var(--text-muted)';
+        btnSeguir.disabled = false;
+      } else {
+        btnSeguir.innerText = 'Solicitado';
+        btnSeguir.className = 'btn-outline';
+        btnSeguir.style.color = 'var(--text-muted)';
+        btnSeguir.disabled = false;
+      }
     } else {
+      estadoSeguimiento = 'ninguno';
       btnSeguir.innerText = 'Seguir';
       btnSeguir.className = 'btn-primary';
       btnSeguir.style.color = 'white';
+      btnSeguir.disabled = false;
     }
   }
 
+  // ⚡ CONMUTAR SEGUIR / CANCELAR SOLICITUD / DEJAR DE SEGUIR
   async function toggleSeguirUsuario() {
-    const { data } = await supabase
+    btnSeguir.disabled = true;
+
+    const { data: relacionExistente } = await supabase
       .from('seguidores')
       .select('*')
       .eq('seguidor_id', usuarioActual.id)
       .eq('seguido_id', perfilId)
       .maybeSingle();
 
-    if (data) {
-      await supabase.from('seguidores').delete().eq('id', data.id);
+    if (relacionExistente) {
+      // CANCELAR / DEJAR DE SEGUIR
+      await supabase.from('seguidores').delete().eq('id', relacionExistente.id);
+      
+      await supabase.from('notificaciones')
+        .delete()
+        .eq('emisor_id', usuarioActual.id)
+        .eq('user_id', perfilId)
+        .eq('tipo', 'solicitud_seguimiento');
     } else {
+      // SEGUIR + ENVIAR NOTIFICACIÓN
       await supabase.from('seguidores').insert([{
         seguidor_id: usuarioActual.id,
-        seguido_id: perfilId
+        seguido_id: perfilId,
+        estado: 'aceptado'
+      }]);
+
+      await supabase.from('notificaciones').insert([{
+        user_id: perfilId,
+        emisor_id: usuarioActual.id,
+        tipo: 'solicitud_seguimiento',
+        leida: false
       }]);
     }
-    comprobarEstadoSeguimiento();
+
+    btnSeguir.disabled = false;
+    await comprobarEstadoSeguimiento();
     cargarPerfil();
+    cargarMisRecetasPublicas();
   }
 
   if (esMiPerfil) {
@@ -528,7 +577,117 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
   container.querySelector('#btnVerSeguidores').addEventListener('click', () => cambiarPestana('social'));
   container.querySelector('#btnVerSiguiendo').addEventListener('click', () => cambiarPestana('social'));
 
-  // ⚡ CARGA EN PARALELO DE LOS DATOS DE PERFIL Y CONTADORES
+  // ABRIR DETALLE / AVISO PRIVADO
+  function abrirDetalleRecetaPerfil(r, autorPerfil, misRecetasIds) {
+    const yaGuardada = misRecetasIds.has(r.id) || misRecetasIds.has(r.receta_original_id);
+
+    // PRIVACIDAD: SI NO ES MI PERFIL Y NO LO SIGO -> BLOQUEADO
+    if (!esMiPerfil && estadoSeguimiento !== 'aceptado') {
+      contenidoDetalle.innerHTML = `
+        <div style="text-align: center; padding: 20px 10px;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            ${icons.lock || '🔒'}
+          </div>
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; color: var(--text-main);">Perfil Privado</h3>
+          <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Para ver los ingredientes y pasos completos de <strong>${r.nombre}</strong>, debes seguir a <strong>@${autorPerfil.username || 'usuario'}</strong>.
+          </p>
+          <button id="btnSeguirDesdeModal" class="btn-primary" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 10px;">
+            Seguir a @${autorPerfil.username || 'usuario'}
+          </button>
+        </div>
+      `;
+
+      const btnSeguirModal = contenidoDetalle.querySelector('#btnSeguirDesdeModal');
+      if (btnSeguirModal) {
+        btnSeguirModal.addEventListener('click', async () => {
+          modalDetalle.classList.remove('visible');
+          await toggleSeguirUsuario();
+        });
+      }
+
+      modalDetalle.classList.add('visible');
+      return;
+    }
+
+    // SI TIENE PERMISO (ES MI PERFIL O LO SIGO) -> MUESTRA LA RECETA COMPLETA
+    const imgHtml = r.imagen_url ? `<img src="${r.imagen_url}" alt="${r.nombre}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 14px;" />` : '';
+    
+    const btnGuardarHtml = esMiPerfil ? '' : (yaGuardada ? `
+      <button disabled class="btn-outline" style="width: 100%; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 10px; margin-top: 16px; background: var(--input-bg); color: var(--primary); border: 1px solid var(--primary-light); cursor: default;">
+        ✓ Guardada en Mis Recetas
+      </button>
+    ` : `
+      <button id="btnGuardarDesdePerfilModal" class="btn-primary" style="width: 100%; padding: 10px; font-size: 12px; font-weight: 700; border-radius: 10px; margin-top: 16px;">
+        Guardar en Mis Recetas
+      </button>
+    `);
+
+    contenidoDetalle.innerHTML = `
+      ${imgHtml}
+      <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; color: var(--primary);">${r.nombre}</h2>
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+        ${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min ${r.categorias ? `• ${r.categorias}` : ''}
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.cart || '🛒'} Ingredientes
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.ingredientes || 'Sin ingredientes especificados.'}</div>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          ${icons.chef || '👨‍🍳'} Pasos
+        </h4>
+        <div style="font-size: 13px; color: var(--text-main); line-height: 1.5; white-space: pre-line;">${r.pasos || 'Sin pasos explicados.'}</div>
+      </div>
+
+      ${btnGuardarHtml}
+    `;
+
+    const btnGuardarModal = contenidoDetalle.querySelector('#btnGuardarDesdePerfilModal');
+    if (btnGuardarModal) {
+      btnGuardarModal.addEventListener('click', async () => {
+        btnGuardarModal.disabled = true;
+        btnGuardarModal.innerText = 'Guardando...';
+
+        try {
+          const idCreadorOriginal = r.autor_original_id || r.user_id;
+          const idRecetaPadre = r.receta_original_id || r.id;
+
+          const nuevaRecetaPayload = {
+            user_id: usuarioActual.id,
+            nombre: r.nombre.replace(/\s*\(de @[^)]+\)/gi, ''),
+            ingredientes: r.ingredientes || '',
+            pasos: r.pasos || '',
+            tiempo_preparacion: r.tiempo_preparacion || 15,
+            imagen_url: r.imagen_url || null,
+            categorias: r.categorias || 'Comida',
+            es_publica: false,
+            receta_original_id: idRecetaPadre,
+            autor_original_id: idCreadorOriginal
+          };
+
+          const { error: insertErr } = await supabase.from('recetas').insert([nuevaRecetaPayload]);
+          if (insertErr) throw insertErr;
+
+          btnGuardarModal.innerText = '¡Guardada!';
+          modalDetalle.classList.remove('visible');
+          cargarMisRecetasPublicas();
+        } catch (err) {
+          alert('Error al guardar: ' + err.message);
+          btnGuardarModal.disabled = false;
+          btnGuardarModal.innerText = 'Guardar en Mis Recetas';
+        }
+      });
+    }
+
+    modalDetalle.classList.add('visible');
+  }
+
+  // ⚡ CARGA DE DATOS DE PERFIL Y CONTADORES
   async function cargarPerfil() {
     const [resPerfil, resSeguidores, resSiguiendo, resPublicas] = await Promise.all([
       supabase.from('perfiles').select('*').eq('id', perfilId).single(),
@@ -571,7 +730,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
     cntSiguiendo.innerText = siguiendo;
     cntPublicas.innerText = cPublicas;
 
-    // Actualizar caché de perfil
     if (!cachePerfilesMemoria[perfilId]) cachePerfilesMemoria[perfilId] = {};
     cachePerfilesMemoria[perfilId] = {
       ...cachePerfilesMemoria[perfilId],
@@ -582,7 +740,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
     };
   }
 
-  function renderizarPublicasHTML(publicas, mapaAutoresOriginales) {
+  function renderizarPublicasHTML(publicas, mapaAutoresOriginales, misRecetasIds, perfilObj) {
     const grid = container.querySelector('#gridMisPublicas');
     if (!publicas || publicas.length === 0) {
       grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Este usuario no tiene recetas públicas.</p>';
@@ -594,7 +752,7 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       const esCompartida = !!autorOriginal && autorOriginal.id !== r.user_id;
 
       return `
-        <div class="card" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card card-receta-perfil-item" data-id="${r.id}" style="padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s;">
           <div>
             ${r.imagen_url ? `<img src="${r.imagen_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />` : ''}
             
@@ -606,45 +764,54 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
             ` : ''}
 
             <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">${r.nombre}</h4>
-            <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time} ${r.tiempo_preparacion || 15} min • ${icons.globe} Pública</span>
+            <span style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icons.time || '⏱'} ${r.tiempo_preparacion || 15} min • ${icons.globe || '🌐'} Pública</span>
           </div>
         </div>
       `;
     }).join('');
 
-    grid.querySelectorAll('.btn-ver-perfil-creador-original').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const autorId = btn.getAttribute('data-autorid');
-        if (autorId) {
-          const appContent = document.querySelector('.main-content');
-          if (appContent) {
-            appContent.innerHTML = '';
-            appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+    grid.querySelectorAll('.card-receta-perfil-item').forEach(card => {
+      card.addEventListener('click', (e) => {
+        const btnCreador = e.target.closest('.btn-ver-perfil-creador-original');
+        if (btnCreador) {
+          e.stopPropagation();
+          const autorId = btnCreador.getAttribute('data-autorid');
+          if (autorId) {
+            const appContent = document.querySelector('.main-content');
+            if (appContent) {
+              appContent.innerHTML = '';
+              appContent.appendChild(renderPerfilView(usuarioActual, autorId, () => renderPerfilView(usuarioActual, perfilId, vistaOrigen)));
+            }
           }
+          return;
+        }
+
+        const id = card.getAttribute('data-id');
+        const recetaSel = publicas.find(item => item.id === id);
+        if (recetaSel) {
+          abrirDetalleRecetaPerfil(recetaSel, perfilObj, misRecetasIds);
         }
       });
     });
   }
 
   async function cargarMisRecetasPublicas() {
-    if (datosCached && datosCached.publicas) {
-      renderizarPublicasHTML(datosCached.publicas, datosCached.mapaAutoresOriginales || {});
-    } else {
-      container.querySelector('#gridMisPublicas').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Cargando...</p>';
-    }
-
     try {
-      const { data: publicas, error: errPublicas } = await supabase
-        .from('recetas')
-        .select('*')
-        .eq('user_id', perfilId)
-        .eq('es_publica', true)
-        .order('created_at', { ascending: false });
+      const [resPublicas, resMisRecetas] = await Promise.all([
+        supabase.from('recetas').select('*').eq('user_id', perfilId).eq('es_publica', true).order('created_at', { ascending: false }),
+        supabase.from('recetas').select('id, receta_original_id').eq('user_id', usuarioActual.id)
+      ]);
 
-      if (errPublicas) throw errPublicas;
+      const publicas = resPublicas.data || [];
+      const misRecetasGuardadas = resMisRecetas.data || [];
 
-      const idsAutoresOriginales = [...new Set((publicas || []).map(r => r.autor_original_id).filter(Boolean))];
+      const misRecetasIds = new Set();
+      misRecetasGuardadas.forEach(myR => {
+        if (myR.receta_original_id) misRecetasIds.add(myR.receta_original_id);
+        if (myR.id) misRecetasIds.add(myR.id);
+      });
+
+      const idsAutoresOriginales = [...new Set(publicas.map(r => r.autor_original_id).filter(Boolean))];
       const mapaAutoresOriginales = {};
 
       if (idsAutoresOriginales.length > 0) {
@@ -658,17 +825,17 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
         });
       }
 
+      const perfilObj = (cachePerfilesMemoria[perfilId] && cachePerfilesMemoria[perfilId].perfil) || { username: 'usuario' };
+
       if (!cachePerfilesMemoria[perfilId]) cachePerfilesMemoria[perfilId] = {};
       cachePerfilesMemoria[perfilId].publicas = publicas;
       cachePerfilesMemoria[perfilId].mapaAutoresOriginales = mapaAutoresOriginales;
 
-      renderizarPublicasHTML(publicas, mapaAutoresOriginales);
+      renderizarPublicasHTML(publicas, mapaAutoresOriginales, misRecetasIds, perfilObj);
 
     } catch (err) {
       console.error("Error cargando recetas públicas del perfil:", err);
-      if (!datosCached || !datosCached.publicas) {
-        container.querySelector('#gridMisPublicas').innerHTML = '<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las recetas de este perfil.</p>';
-      }
+      container.querySelector('#gridMisPublicas').innerHTML = '<p style="color: var(--danger); font-size: 13px; grid-column: 1/-1;">Error al cargar las recetas de este perfil.</p>';
     }
   }
 
@@ -687,7 +854,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
     const relacionesSeguidores = resSeguidores.data || [];
     const relacionesSiguiendo = resSiguiendo.data || [];
 
-    // PERSONAS QUE SIGUEN A ESTE USUARIO
     if (relacionesSeguidores.length > 0) {
       const idsSeguidores = relacionesSeguidores.map(s => s.seguidor_id);
       const { data: perfilesSeguidores } = await supabase.from('perfiles').select('*').in('id', idsSeguidores);
@@ -720,7 +886,6 @@ export function renderPerfilView(usuarioActual, targetUserId = null, vistaOrigen
       divMeSiguen.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">Nadie le sigue aún.</p>';
     }
 
-    // PERSONAS A LAS QUE SIGUE ESTE USUARIO
     if (relacionesSiguiendo.length > 0) {
       const idsSiguiendo = relacionesSiguiendo.map(s => s.seguido_id);
       const { data: perfilesSiguiendo } = await supabase.from('perfiles').select('*').in('id', idsSiguiendo);

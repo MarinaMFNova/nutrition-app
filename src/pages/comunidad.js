@@ -467,11 +467,15 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           secUsuarios.classList.remove('hidden');
           gridUsuarios.innerHTML = perfilesEncontrados.map(p => {
             const estado = mapaRelaciones[p.id];
-            let btnHtml = estado === 'aceptado' 
-              ? `<span style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:5px 12px; border-radius:12px;">Siguiendo</span>`
-              : (estado === 'pendiente' 
-                ? `<button disabled style="padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; background:var(--input-bg); color:var(--text-muted); border:1px solid var(--border); margin:0;">Solicitado</button>`
-                : `<button class="btn-enviar-solicitud btn-primary" data-id="${p.id}" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`);
+            
+            let btnHtml = '';
+            if (estado === 'aceptado') {
+              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="aceptado" style="width:auto; padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted);">Siguiendo</button>`;
+            } else if (estado === 'pendiente') {
+              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="pendiente" style="width:auto; padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted);">Solicitado</button>`;
+            } else {
+              btnHtml = `<button class="btn-toggle-seguir btn-primary" data-id="${p.id}" data-estado="ninguno" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`;
+            }
 
             return `
               <div class="card card-perfil-item" data-id="${p.id}" style="padding:12px 14px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer;">
@@ -492,6 +496,53 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
           gridUsuarios.querySelectorAll('.area-click-perfil').forEach(area => {
             area.addEventListener('click', () => irAlPerfilCocinero(area.getAttribute('data-id')));
           });
+
+          // ⚡ EVENTO CONMUTAR SEGUIR / CANCELAR SOLICITUD DESDE EL BUSCADOR
+          gridUsuarios.querySelectorAll('.btn-toggle-seguir').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const idTarget = btn.getAttribute('data-id');
+              const estadoActual = btn.getAttribute('data-estado');
+              btn.disabled = true;
+
+              try {
+                if (estadoActual === 'aceptado' || estadoActual === 'pendiente') {
+                  // CANCELAR SOLICITUD O DEJAR DE SEGUIR
+                  await supabase.from('seguidores')
+                    .delete()
+                    .eq('seguidor_id', usuarioActual.id)
+                    .eq('seguido_id', idTarget);
+
+                  await supabase.from('notificaciones')
+                    .delete()
+                    .eq('emisor_id', usuarioActual.id)
+                    .eq('user_id', idTarget)
+                    .eq('tipo', 'solicitud_seguimiento');
+
+                } else {
+                  // SEGUIR + NOTIFICAR
+                  await supabase.from('seguidores').insert([{
+                    seguidor_id: usuarioActual.id,
+                    seguido_id: idTarget,
+                    estado: 'aceptado'
+                  }]);
+
+                  await supabase.from('notificaciones').insert([{
+                    user_id: idTarget,
+                    emisor_id: usuarioActual.id,
+                    tipo: 'solicitud_seguimiento',
+                    leida: false
+                  }]);
+                }
+
+                cargarComunidad(inputBuscar.value, true);
+              } catch (err) {
+                console.error("Error al conmutar seguimiento desde el buscador:", err);
+                btn.disabled = false;
+              }
+            });
+          });
+
         } else {
           secUsuarios.classList.add('hidden');
         }
