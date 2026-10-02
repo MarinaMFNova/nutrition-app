@@ -133,7 +133,6 @@ export function renderNotificacionesView(usuarioActual) {
 
       // 1. EVENTO ABRIR/MARCAR COMO LEÍDA AL HACER CLIC EN LA NOTIFICACIÓN
       notifItem.addEventListener('click', async (e) => {
-        // Evitamos marcar leída si se pulsa en el botón de borrar o acciones
         if (e.target.closest('.btn-borrar-notif') || e.target.closest('.acciones-solicitud-wrapper')) return;
 
         if (!n.leida) {
@@ -156,15 +155,16 @@ export function renderNotificacionesView(usuarioActual) {
             const appContent = document.querySelector('.main-content');
             if (appContent) {
               appContent.innerHTML = '';
-              // Pasamos Notificaciones como origen para que al pulsar "Volver" regrese exactamente aquí
               appContent.appendChild(renderPerfilView(usuarioActual, emisorId, () => renderNotificacionesView(usuarioActual)));
             }
           }
         });
       });
+
       lista.appendChild(notifItem);
     });
 
+    // ACEPTAR Y SEGUIR TAMBIÉN
     lista.querySelectorAll('.btn-aceptar-y-seguir').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -175,16 +175,20 @@ export function renderNotificacionesView(usuarioActual) {
         btn.innerText = 'Procesando...';
 
         try {
-          await supabase.from('seguidores').update({ estado: 'aceptado' }).eq('seguidor_id', emisorId).eq('seguido_id', usuarioActual.id);
+          // Aceptar la solicitud entrante
+          await supabase.from('seguidores')
+            .upsert([{ seguidor_id: emisorId, seguido_id: usuarioActual.id, estado: 'aceptado' }]);
 
-          await supabase.from('seguidores').upsert([{
-            seguidor_id: usuarioActual.id,
-            seguido_id: emisorId,
-            estado: 'aceptado'
-          }]);
+          // Seguir de vuelta
+          await supabase.from('seguidores')
+            .upsert([{ seguidor_id: usuarioActual.id, seguido_id: emisorId, estado: 'aceptado' }]);
 
-          await supabase.from('notificaciones').update({ tipo: 'conexion_mutua', leida: true }).eq('id', notifId);
+          // Transformar la notificación actual en "conexion_mutua"
+          await supabase.from('notificaciones')
+            .update({ tipo: 'conexion_mutua', leida: true })
+            .eq('id', notifId);
 
+          // Notificar al emisor que ahora os seguís mutuamente
           await supabase.from('notificaciones').insert([{
             user_id: emisorId,
             emisor_id: usuarioActual.id,
@@ -200,6 +204,7 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
+    // SOLO ACEPTAR
     lista.querySelectorAll('.btn-aceptar').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -210,9 +215,12 @@ export function renderNotificacionesView(usuarioActual) {
         btn.innerText = 'Aceptando...';
 
         try {
-          await supabase.from('seguidores').update({ estado: 'aceptado' }).eq('seguidor_id', emisorId).eq('seguido_id', usuarioActual.id);
+          await supabase.from('seguidores')
+            .upsert([{ seguidor_id: emisorId, seguido_id: usuarioActual.id, estado: 'aceptado' }]);
           
-          await supabase.from('notificaciones').update({ tipo: 'seguimiento_aceptado', leida: true }).eq('id', notifId);
+          await supabase.from('notificaciones')
+            .update({ tipo: 'seguimiento_aceptado', leida: true })
+            .eq('id', notifId);
 
           await supabase.from('notificaciones').insert([{
             user_id: emisorId,
@@ -228,6 +236,7 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
+    // RECHAZAR
     lista.querySelectorAll('.btn-rechazar').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -248,6 +257,7 @@ export function renderNotificacionesView(usuarioActual) {
       });
     });
 
+    // BORRAR INDIVIDUAL
     lista.querySelectorAll('.btn-borrar-notif').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();

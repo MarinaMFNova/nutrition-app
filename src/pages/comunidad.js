@@ -60,7 +60,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       <h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
         ${icons.users || '👥'} Cocineros encontrados
       </h3>
-      <div id="gridUsuariosEncontrados" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;"></div>
+      <div id="gridUsuariosEncontrados" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;"></div>
     </div>
 
     <!-- SECCIÓN 2: FEED DE RECETAS DE SEGUIDOS ACEPTADOS -->
@@ -428,7 +428,6 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
     const termino = busqueda.toLowerCase().trim().replace('@', '');
     const hayBusqueda = termino.length > 0;
 
-    // RENDERIZADO DESDE MEMORIA SI NO HAY BÚSQUEDA NI FILTROS
     if (cacheComunidadMemoria && !hayBusqueda && categoriaFiltro === 'Todos' && !forzarRecarga) {
       renderizarListaFeed(cacheComunidadMemoria.recetasFiltradas, cacheComunidadMemoria.mapaPerfiles, cacheComunidadMemoria.misRecetasGuardadas);
       lblPagInfo.innerText = `Página ${paginaActual} de ${cacheComunidadMemoria.totalPaginas || 1}`;
@@ -470,11 +469,11 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
             
             let btnHtml = '';
             if (estado === 'aceptado') {
-              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="aceptado" style="width:auto; padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted);">Siguiendo</button>`;
+              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="aceptado" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted); white-space:nowrap; flex-shrink:0;">Siguiendo</button>`;
             } else if (estado === 'pendiente') {
-              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="pendiente" style="width:auto; padding:5px 12px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted);">Solicitado</button>`;
+              btnHtml = `<button class="btn-toggle-seguir btn-outline" data-id="${p.id}" data-estado="pendiente" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0; color:var(--text-muted); white-space:nowrap; flex-shrink:0;">Solicitado</button>`;
             } else {
-              btnHtml = `<button class="btn-toggle-seguir btn-primary" data-id="${p.id}" data-estado="ninguno" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0;">Seguir</button>`;
+              btnHtml = `<button class="btn-toggle-seguir btn-primary" data-id="${p.id}" data-estado="ninguno" style="width:auto; padding:6px 14px; font-size:11px; font-weight:700; border-radius:10px; margin:0; white-space:nowrap; flex-shrink:0;">Seguir</button>`;
             }
 
             return `
@@ -550,29 +549,20 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
         secUsuarios.classList.add('hidden');
       }
 
-      if (idsAceptados.length === 0) {
-        gridFeed.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
-            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">Aún no sigues a ningún cocinero</p>
-            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username y envíales una solicitud de seguimiento.</p>
-          </div>
-        `;
-        lblPagInfo.innerText = "Página 1 de 1";
-        btnPagAnt.disabled = true;
-        btnPagSig.disabled = true;
-        return;
-      }
-
       // CALCULAMOS EL RANGO PARA PAGINACIÓN DE 12 ELEMENTOS
       const desde = (paginaActual - 1) * recetasPorPagina;
       const hasta = desde + recetasPorPagina - 1;
 
+      // ⚡ SI SIGUE A ALGUIEN, BUSCA RECETAS DE SUS SEGUIDOS; SI NO SIGUE A NADIE, MUESTRA TODAS LAS RECETAS PÚBLICAS
       let query = supabase
         .from('recetas')
         .select('id, user_id, autor_original_id, receta_original_id, nombre, tiempo_preparacion, ingredientes, pasos, categorias, imagen_url', { count: 'exact' })
         .eq('es_publica', true)
-        .in('user_id', idsAceptados)
         .order('created_at', { ascending: false });
+
+      if (idsAceptados.length > 0) {
+        query = query.in('user_id', idsAceptados);
+      }
 
       if (hayBusqueda) {
         query = query.or(`nombre.ilike.%${termino}%,ingredientes.ilike.%${termino}%`);
@@ -595,7 +585,12 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
       btnPagSig.disabled = paginaActual >= totalPaginas;
 
       if (recetasComunidad.length === 0) {
-        gridFeed.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No hay recetas en esta página.</p>';
+        gridFeed.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 30px 20px; background: var(--input-bg); border-radius: 16px; border: 1px dashed var(--border);">
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800; color: var(--text-main);">No hay recetas disponibles</p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Busca arriba a otros usuarios por su @username para enviarles una solicitud de seguimiento.</p>
+          </div>
+        `;
         return;
       }
 
