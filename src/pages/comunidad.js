@@ -10,7 +10,7 @@ export function renderComunidadView(usuarioActual, onRecetaImportada) {
 
   let categoriaFiltro = 'Todos';
   let paginaActual = 1;
-  const recetasPorPagina = 12;
+  const recetasPorPagina = 15;
   let totalPaginas = 1;
 
   const listaCategorias = [

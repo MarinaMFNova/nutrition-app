@@ -15,9 +15,9 @@ export function renderRecetasView(usuarioActual, abrirFormularioInicial = false)
   let recetaEditandoId = null;
   let recetaABorrarId = null;
   
-  // VARIABLES DE PAGINACIÓN (12 RECETAS POR PÁGINA)
+  // VARIABLES DE PAGINACIÓN (15 RECETAS POR PÁGINA)
   let paginaActual = 1;
-  const recetasPorPagina = 12;
+  const recetasPorPagina = 15;
   let totalPaginas = 1;
 
   // VARIABLES PARA CONSERVAR LA AUTORÍA ORIGINAL AL EDITAR
